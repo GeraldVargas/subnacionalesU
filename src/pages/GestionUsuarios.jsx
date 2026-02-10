@@ -8,6 +8,8 @@ const GestionUsuarios = () => {
     const [error, setError] = useState(null);
     const [modalAbierto, setModalAbierto] = useState(false);
     const [guardando, setGuardando] = useState(false);
+    const [modoEdicion, setModoEdicion] = useState(false);
+    const [usuarioEditando, setUsuarioEditando] = useState(null);
 
     const [nuevoUsuario, setNuevoUsuario] = useState({
         nombre_usuario: '',
@@ -85,25 +87,51 @@ const GestionUsuarios = () => {
         cargarRoles();
     }, []);
 
-    const abrirModal = () => {
+    const abrirModal = (usuario = null) => {
+        if (usuario) {
+            // Modo edición
+            setModoEdicion(true);
+            setUsuarioEditando(usuario);
+            setNuevoUsuario({
+                nombre_usuario: usuario.nombre_usuario,
+                contrasena: '', // No mostramos la contraseña actual
+                id_rol: usuario.roles && usuario.roles.length > 0
+                    ? roles.find(r => r.nombre === usuario.roles[0].name)?.id_rol || ''
+                    : '',
+                persona: {
+                    nombre: usuario.persona?.nombre || '',
+                    apellido_paterno: usuario.persona?.apellido_paterno || '',
+                    apellido_materno: usuario.persona?.apellido_materno || '',
+                    ci: usuario.persona?.ci || '',
+                    celular: usuario.persona?.celular || '',
+                    email: usuario.persona?.email || ''
+                }
+            });
+        } else {
+            // Modo creación
+            setModoEdicion(false);
+            setUsuarioEditando(null);
+            setNuevoUsuario({
+                nombre_usuario: '',
+                contrasena: '',
+                id_rol: '',
+                persona: {
+                    nombre: '',
+                    apellido_paterno: '',
+                    apellido_materno: '',
+                    ci: '',
+                    celular: '',
+                    email: ''
+                }
+            });
+        }
         setModalAbierto(true);
-        setNuevoUsuario({
-            nombre_usuario: '',
-            contrasena: '',
-            id_rol: '',
-            persona: {
-                nombre: '',
-                apellido_paterno: '',
-                apellido_materno: '',
-                ci: '',
-                celular: '',
-                email: ''
-            }
-        });
     };
 
     const cerrarModal = () => {
         setModalAbierto(false);
+        setModoEdicion(false);
+        setUsuarioEditando(null);
         setError(null);
     };
 
@@ -116,8 +144,14 @@ const GestionUsuarios = () => {
             const API_URL = import.meta.env.VITE_API_URL;
             const token = localStorage.getItem('token');
 
-            const response = await fetch(`${API_URL}/usuarios`, {
-                method: 'POST',
+            const url = modoEdicion
+                ? `${API_URL}/usuarios/${usuarioEditando.id_usuario}`
+                : `${API_URL}/usuarios`;
+
+            const method = modoEdicion ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -128,16 +162,16 @@ const GestionUsuarios = () => {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.message || 'Error al crear usuario');
+                throw new Error(data.message || `Error al ${modoEdicion ? 'actualizar' : 'crear'} usuario`);
             }
 
             if (data.success) {
                 // Recargar usuarios
                 await cargarUsuarios();
                 cerrarModal();
-                alert('✅ Usuario creado exitosamente');
+                alert(`✅ Usuario ${modoEdicion ? 'actualizado' : 'creado'} exitosamente`);
             } else {
-                throw new Error(data.message || 'Error al crear usuario');
+                throw new Error(data.message || `Error al ${modoEdicion ? 'actualizar' : 'crear'} usuario`);
             }
 
         } catch (err) {
@@ -163,6 +197,41 @@ const GestionUsuarios = () => {
                 ...prev,
                 [name]: value
             }));
+        }
+    };
+
+    const eliminarUsuario = async (usuario) => {
+        if (!confirm(`¿Estás seguro de desactivar al usuario "${usuario.nombre_usuario}"?\n\nEsta acción marcará al usuario como inactivo.`)) {
+            return;
+        }
+
+        try {
+            const API_URL = import.meta.env.VITE_API_URL;
+            const token = localStorage.getItem('token');
+
+            const response = await fetch(`${API_URL}/usuarios/${usuario.id_usuario}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Error al eliminar usuario');
+            }
+
+            if (data.success) {
+                alert('✅ ' + data.message);
+                await cargarUsuarios();
+            } else {
+                throw new Error(data.message || 'Error al eliminar usuario');
+            }
+
+        } catch (err) {
+            alert('❌ ' + err.message);
+            console.error('Error:', err);
         }
     };
 
@@ -252,8 +321,20 @@ const GestionUsuarios = () => {
 
                                     {/* Botones */}
                                     <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                        <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition"><Edit size={16} /></button>
-                                        <button className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition"><Trash2 size={16} /></button>
+                                        <button
+                                            onClick={() => abrirModal(u)}
+                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition"
+                                            title="Editar usuario"
+                                        >
+                                            <Edit size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => eliminarUsuario(u)}
+                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                                            title="Desactivar usuario"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
@@ -269,7 +350,9 @@ const GestionUsuarios = () => {
 
                         {/* Header del Modal */}
                         <div className="sticky top-0 bg-red-600 text-white px-6 py-4 flex justify-between items-center rounded-t-2xl">
-                            <h2 className="text-xl font-bold">Crear Nuevo Usuario</h2>
+                            <h2 className="text-xl font-bold">
+                                {modoEdicion ? 'Editar Usuario' : 'Crear Nuevo Usuario'}
+                            </h2>
                             <button onClick={cerrarModal} className="hover:bg-red-700 p-2 rounded-full transition">
                                 <X size={20} />
                             </button>
@@ -309,17 +392,22 @@ const GestionUsuarios = () => {
 
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                            Contraseña *
+                                            Contraseña {modoEdicion ? '(opcional)' : '*'}
                                         </label>
                                         <input
                                             type="password"
                                             name="contrasena"
                                             value={nuevoUsuario.contrasena}
                                             onChange={handleInputChange}
-                                            required
+                                            required={!modoEdicion}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                            placeholder="••••••••"
+                                            placeholder={modoEdicion ? "Dejar vacío para mantener la actual" : "••••••••"}
                                         />
+                                        {modoEdicion && (
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Solo ingresa una contraseña si deseas cambiarla
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -454,7 +542,10 @@ const GestionUsuarios = () => {
                                     disabled={guardando}
                                     className="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    {guardando ? 'Creando...' : 'Crear Usuario'}
+                                    {guardando
+                                        ? (modoEdicion ? 'Actualizando...' : 'Creando...')
+                                        : (modoEdicion ? 'Actualizar Usuario' : 'Crear Usuario')
+                                    }
                                 </button>
                             </div>
                         </form>

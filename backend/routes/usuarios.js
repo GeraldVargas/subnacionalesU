@@ -275,4 +275,201 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+// PUT /api/usuarios/:id - Actualizar usuario
+router.put('/:id', async (req, res) => {
+    const { id } = req.params;
+    const {
+        nombre_usuario,
+        contrasena,
+        id_rol,
+        persona
+    } = req.body;
+
+    try {
+        // Validaciones
+        if (!nombre_usuario || !id_rol || !persona) {
+            return res.status(400).json({
+                success: false,
+                message: 'Faltan campos requeridos'
+            });
+        }
+
+        if (!persona.nombre || !persona.apellido_paterno || !persona.ci) {
+            return res.status(400).json({
+                success: false,
+                message: 'Faltan datos de la persona (nombre, apellido_paterno, ci)'
+            });
+        }
+
+        // Verificar si el usuario existe
+        const usuarioActual = await pool.query(
+            'SELECT id_persona, nombre_usuario FROM usuario WHERE id_usuario = $1',
+            [id]
+        );
+
+        if (usuarioActual.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Usuario no encontrado'
+            });
+        }
+
+        // Verificar si el nuevo nombre de usuario ya existe (si cambió)
+        if (nombre_usuario !== usuarioActual.rows[0].nombre_usuario) {
+            const usuarioExiste = await pool.query(
+                'SELECT id_usuario FROM usuario WHERE nombre_usuario = $1 AND id_usuario != $2',
+                [nombre_usuario, id]
+            );
+
+            if (usuarioExiste.rows.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'El nombre de usuario ya existe'
+                });
+            }
+        }
+
+        const id_persona = usuarioActual.rows[0].id_persona;
+
+        // Verificar si el CI ya existe en otra persona
+        const ciExiste = await pool.query(
+            'SELECT id_persona FROM persona WHERE ci = $1 AND id_persona != $2',
+            [persona.ci, id_persona]
+        );
+
+        if (ciExiste.rows.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'El CI ya está registrado en otra persona'
+            });
+        }
+
+        // Iniciar transacción
+        await pool.query('BEGIN');
+
+        try {
+            // 1. Actualizar persona
+            await pool.query(`
+                UPDATE persona 
+                SET nombre = $1, 
+                    apellido_paterno = $2, 
+                    apellido_materno = $3, 
+                    ci = $4, 
+                    celular = $5, 
+                    email = $6
+                WHERE id_persona = $7
+            `, [
+                persona.nombre,
+                persona.apellido_paterno,
+                persona.apellido_materno || null,
+                persona.ci,
+                persona.celular || null,
+                persona.email || null,
+                id_persona
+            ]);
+
+            // 2. Actualizar usuario
+            let updateQuery = `
+                UPDATE usuario 
+                SET nombre_usuario = $1, 
+                    id_rol = $2
+            `;
+            let params = [nombre_usuario, id_rol];
+
+            // Si se proporciona nueva contraseña, hashearla y actualizarla
+            if (contrasena && contrasena.trim() !== '') {
+                const hashedPassword = await bcrypt.hash(contrasena, 10);
+                updateQuery += `, contrasena = $3 WHERE id_usuario = $4`;
+                params.push(hashedPassword, id);
+            } else {
+                updateQuery += ` WHERE id_usuario = $3`;
+                params.push(id);
+            }
+
+            await pool.query(updateQuery, params);
+
+            // Commit transacción
+            await pool.query('COMMIT');
+
+            // Obtener el usuario actualizado
+            const usuarioActualizado = await pool.query(`
+                SELECT 
+                    u.id_usuario,
+                    u.nombre_usuario,
+                    u.id_rol,
+                    u.id_persona,
+                    p.nombre,
+                    p.apellido_paterno,
+                    p.apellido_materno,
+                    p.ci,
+                    p.celular,
+                    p.email,
+                    r.nombre as rol_nombre
+                FROM usuario u
+                INNER JOIN persona p ON u.id_persona = p.id_persona
+                LEFT JOIN rol r ON u.id_rol = r.id_rol
+                WHERE u.id_usuario = $1
+            `, [id]);
+
+            res.json({
+                success: true,
+                message: 'Usuario actualizado exitosamente',
+                data: usuarioActualizado.rows[0]
+            });
+
+        } catch (error) {
+            // Rollback en caso de error
+            await pool.query('ROLLBACK');
+            throw error;
+        }
+
+    } catch (error) {
+        console.error('Error al actualizar usuario:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al actualizar usuario',
+            error: error.message
+        });
+    }
+});
+
+// DELETE /api/usuarios/:id - Eliminar usuario (soft delete)
+router.delete('/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        // Verificar si el usuario existe
+        const usuarioExiste = await pool.query(
+            'SELECT id_usuario, nombre_usuario FROM usuario WHERE id_usuario = $1',
+            [id]
+        );
+
+        if (usuarioExiste.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Usuario no encontrado'
+            });
+        }
+
+        // Soft delete: establecer fecha_fin
+        await pool.query(
+            'UPDATE usuario SET fecha_fin = CURRENT_TIMESTAMP WHERE id_usuario = $1',
+            [id]
+        );
+
+        res.json({
+            success: true,
+            message: `Usuario "${usuarioExiste.rows[0].nombre_usuario}" desactivado exitosamente`
+        });
+
+    } catch (error) {
+        console.error('Error al eliminar usuario:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al eliminar usuario',
+            error: error.message
+        });
+    }
+});
+
 export default router;
