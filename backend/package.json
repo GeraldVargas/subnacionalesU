@@ -7,8 +7,7 @@
     "scripts": {
         "start": "node server.js",
         "dev": "node --watch server.js",
-        "crear-usuarios": "node scripts/crear-usuarios-prueba.js",
-        "crear-tabla-frentes": "node scripts/crear-tabla-frentes.js"
+        "crear-usuarios": "node scripts/crear-usuarios-prueba.js"
     },
     "keywords": [
         "express",
