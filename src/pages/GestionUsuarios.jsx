@@ -10,6 +10,7 @@ const GestionUsuarios = () => {
     const [guardando, setGuardando] = useState(false);
     const [modoEdicion, setModoEdicion] = useState(false);
     const [usuarioEditando, setUsuarioEditando] = useState(null);
+    const [idUsuarioEditar, setIdUsuarioEditar] = useState(null);
 
     const [nuevoUsuario, setNuevoUsuario] = useState({
         nombre_usuario: '',
@@ -92,12 +93,12 @@ const GestionUsuarios = () => {
             // Modo edición
             setModoEdicion(true);
             setUsuarioEditando(usuario);
+            setIdUsuarioEditar(usuario.id_usuario);
+            
             setNuevoUsuario({
-                nombre_usuario: usuario.nombre_usuario,
+                nombre_usuario: usuario.nombre_usuario || '',
                 contrasena: '', // No mostramos la contraseña actual
-                id_rol: usuario.roles && usuario.roles.length > 0
-                    ? roles.find(r => r.nombre === usuario.roles[0].name)?.id_rol || ''
-                    : '',
+                id_rol: usuario.id_rol ? String(usuario.id_rol) : '',
                 persona: {
                     nombre: usuario.persona?.nombre || '',
                     apellido_paterno: usuario.persona?.apellido_paterno || '',
@@ -132,7 +133,21 @@ const GestionUsuarios = () => {
         setModalAbierto(false);
         setModoEdicion(false);
         setUsuarioEditando(null);
+        setIdUsuarioEditar(null);
         setError(null);
+        setNuevoUsuario({
+            nombre_usuario: '',
+            contrasena: '',
+            id_rol: '',
+            persona: {
+                nombre: '',
+                apellido_paterno: '',
+                apellido_materno: '',
+                ci: '',
+                celular: '',
+                email: ''
+            }
+        });
     };
 
     const handleSubmit = async (e) => {
@@ -140,12 +155,18 @@ const GestionUsuarios = () => {
         setGuardando(true);
         setError(null);
 
+        // Preparar los datos para enviar, convirtiendo id_rol a número
+        const datosParaEnviar = {
+            ...nuevoUsuario,
+            id_rol: parseInt(nuevoUsuario.id_rol)
+        };
+
         try {
             const API_URL = import.meta.env.VITE_API_URL;
             const token = localStorage.getItem('token');
 
             const url = modoEdicion
-                ? `${API_URL}/usuarios/${usuarioEditando.id_usuario}`
+                ? `${API_URL}/usuarios/${idUsuarioEditar}`
                 : `${API_URL}/usuarios`;
 
             const method = modoEdicion ? 'PUT' : 'POST';
@@ -156,7 +177,7 @@ const GestionUsuarios = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(nuevoUsuario)
+                body: JSON.stringify(datosParaEnviar)
             });
 
             const data = await response.json();
@@ -322,14 +343,22 @@ const GestionUsuarios = () => {
                                     {/* Botones */}
                                     <td className="px-6 py-4 text-right flex justify-end gap-2">
                                         <button
-                                            onClick={() => abrirModal(u)}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                abrirModal(u);
+                                            }}
                                             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition"
                                             title="Editar usuario"
                                         >
                                             <Edit size={16} />
                                         </button>
                                         <button
-                                            onClick={() => eliminarUsuario(u)}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                eliminarUsuario(u);
+                                            }}
                                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition"
                                             title="Desactivar usuario"
                                         >

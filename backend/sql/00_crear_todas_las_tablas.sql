@@ -17,9 +17,8 @@ CREATE TABLE IF NOT EXISTS persona (
     apellido_paterno VARCHAR(100) NOT NULL,
     apellido_materno VARCHAR(100),
     ci VARCHAR(20) UNIQUE NOT NULL,
-    celular VARCHAR(20),
-    email VARCHAR(100),
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    celular INTEGER,
+    email VARCHAR(150)
 );
 
 -- Índices para mejorar búsquedas
@@ -37,8 +36,7 @@ COMMENT ON COLUMN persona.ci IS 'Carnet de Identidad - Único';
 CREATE TABLE IF NOT EXISTS rol (
     id_rol SERIAL PRIMARY KEY,
     nombre VARCHAR(100) UNIQUE NOT NULL,
-    descripcion TEXT,
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    descripcion VARCHAR(255)
 );
 
 COMMENT ON TABLE rol IS 'Roles del sistema con sus permisos';
@@ -57,13 +55,12 @@ ON CONFLICT (nombre) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS usuario (
     id_usuario SERIAL PRIMARY KEY,
-    nombre_usuario VARCHAR(50) UNIQUE NOT NULL,
+    nombre_usuario VARCHAR(100) UNIQUE NOT NULL,
     contrasena VARCHAR(255) NOT NULL,
+    fecha_fin DATE,
+    token VARCHAR(255),
     id_rol INTEGER REFERENCES rol(id_rol) ON DELETE SET NULL,
-    id_persona INTEGER REFERENCES persona(id_persona) ON DELETE CASCADE,
-    fecha_inicio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    fecha_fin TIMESTAMP,
-    CONSTRAINT chk_fechas CHECK (fecha_fin IS NULL OR fecha_fin > fecha_inicio)
+    id_persona INTEGER REFERENCES persona(id_persona) ON DELETE CASCADE NOT NULL
 );
 
 -- Índices
@@ -74,6 +71,7 @@ CREATE INDEX IF NOT EXISTS idx_usuario_activo ON usuario(fecha_fin) WHERE fecha_
 COMMENT ON TABLE usuario IS 'Usuarios del sistema con credenciales de acceso';
 COMMENT ON COLUMN usuario.contrasena IS 'Contraseña hasheada con bcrypt';
 COMMENT ON COLUMN usuario.fecha_fin IS 'NULL = usuario activo, con valor = usuario inactivo (soft delete)';
+COMMENT ON COLUMN usuario.token IS 'Token de sesión o recuperación de contraseña';
 
 -- ============================================
 -- 4. TABLA: geografico
@@ -82,12 +80,11 @@ COMMENT ON COLUMN usuario.fecha_fin IS 'NULL = usuario activo, con valor = usuar
 
 CREATE TABLE IF NOT EXISTS geografico (
     id_geografico SERIAL PRIMARY KEY,
-    nombre VARCHAR(200) NOT NULL,
+    nombre VARCHAR(150) NOT NULL,
     codigo VARCHAR(50),
-    ubicacion TEXT,
-    tipo VARCHAR(50) NOT NULL,
+    ubicacion VARCHAR(200),
+    tipo VARCHAR(50),
     fk_id_geografico INTEGER REFERENCES geografico(id_geografico) ON DELETE CASCADE,
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_no_auto_referencia CHECK (id_geografico != fk_id_geografico)
 );
 
@@ -105,10 +102,51 @@ INSERT INTO geografico (nombre, codigo, tipo, fk_id_geografico) VALUES
     ('Cochabamba', 'CB', 'Departamento', NULL),
     ('Cercado', 'CB-CER', 'Provincia', 1),
     ('Colcapirhua', 'CB-CER-COL', 'Municipio', 2)
+ON CONFLICT (nombre) DO NOTHING;
+
+-- ============================================
+-- 5. TABLA: tipo_eleccion
+-- ============================================
+-- Tipos de elecciones (Nacional, Departamental, Municipal, etc.)
+
+CREATE TABLE IF NOT EXISTS tipo_eleccion (
+    id_tipo_eleccion SERIAL PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL,
+    codigo VARCHAR(50) NOT NULL
+);
+
+-- Índices
+CREATE INDEX IF NOT EXISTS idx_tipo_eleccion_codigo ON tipo_eleccion(codigo);
+
+COMMENT ON TABLE tipo_eleccion IS 'Tipos de elecciones del sistema';
+COMMENT ON COLUMN tipo_eleccion.codigo IS 'Código único del tipo de elección';
+
+-- Datos de ejemplo
+INSERT INTO tipo_eleccion (nombre, codigo) VALUES
+    ('Elecciones Subnacionales', 'SUBNAC'),
+    ('Elecciones Generales', 'GENERAL'),
+    ('Referéndum', 'REFER')
 ON CONFLICT DO NOTHING;
 
 -- ============================================
--- 5. TABLA: frente_politico
+-- 6. TABLA: mesa
+-- ============================================
+-- Mesas electorales
+
+CREATE TABLE IF NOT EXISTS mesa (
+    id_mesa SERIAL PRIMARY KEY,
+    codigo VARCHAR(50) UNIQUE NOT NULL,
+    descripcion VARCHAR(200)
+);
+
+-- Índices
+CREATE INDEX IF NOT EXISTS idx_mesa_codigo ON mesa(codigo);
+
+COMMENT ON TABLE mesa IS 'Mesas electorales del sistema';
+COMMENT ON COLUMN mesa.codigo IS 'Código único de la mesa electoral';
+
+-- ============================================
+-- 7. TABLA: frente_politico
 -- ============================================
 -- Partidos y frentes políticos
 
@@ -138,6 +176,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_actualizar_frente ON frente_politico;
 CREATE TRIGGER trigger_actualizar_frente
     BEFORE UPDATE ON frente_politico
     FOR EACH ROW
@@ -166,20 +205,23 @@ ORDER BY table_name;
 -- ============================================
 -- RESUMEN
 -- ============================================
--- Tablas creadas:
--- 1. persona (datos personales)
--- 2. rol (roles del sistema)
--- 3. usuario (usuarios con autenticación)
--- 4. geografico (divisiones geográficas)
--- 5. frente_politico (partidos políticos)
+-- Tablas creadas (7 tablas):
+-- 1. persona (7 columnas: id_persona, nombre, apellido_paterno, apellido_materno, ci, celular, email)
+-- 2. rol (3 columnas: id_rol, nombre, descripcion)
+-- 3. usuario (7 columnas: id_usuario, nombre_usuario, contrasena, fecha_fin, token, id_rol, id_persona)
+-- 4. geografico (6 columnas: id_geografico, nombre, codigo, ubicacion, tipo, fk_id_geografico)
+-- 5. tipo_eleccion (3 columnas: id_tipo_eleccion, nombre, codigo)
+-- 6. mesa (3 columnas: id_mesa, codigo, descripcion)
+-- 7. frente_politico (7 columnas: id_frente, nombre, siglas, color, logo, fecha_creacion, fecha_actualizacion)
 --
 -- Relaciones:
--- - usuario → persona (1:1)
+-- - usuario → persona (N:1)
 -- - usuario → rol (N:1)
 -- - geografico → geografico (auto-referencia para jerarquía)
 --
 -- Datos de ejemplo insertados:
 -- - 3 roles (Administrador, Supervisor, Operador)
 -- - 3 divisiones geográficas (Cochabamba, Cercado, Colcapirhua)
+-- - 3 tipos de elección (Subnacionales, Generales, Referéndum)
 -- - 3 frentes políticos (MAS, CC, CREEMOS)
 -- ============================================

@@ -7,16 +7,13 @@ import DashboardLayout from './layouts/DashboardLayout';
 // Páginas
 import Login from './pages/Login';
 import DashboardHome from './pages/DashboardHome';
-import Transcripcion from './pages/Transcripcion';
+import Transcripcion from './pages/TranscripcionNueva';
 import GestionUsuarios from './pages/GestionUsuarios';
 import Geografia from './pages/Geografia';
 import FrentesPoliticos from './pages/FrentesPoliticos';
-// Componente temporal para Resultados
-const ResultadosPublicos = () => (
-  <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-    <h1 className="text-4xl font-bold text-[#E31E24]">RESULTADOS EN VIVO (TV)</h1>
-  </div>
-);
+import Mesas from './pages/Mesas';
+import ResultadosEnVivo from './pages/ResultadosEnVivo';
+import HistorialActas from './pages/HistorialActas';
 
 function App() {
   return (
@@ -24,7 +21,7 @@ function App() {
       <Routes>
 
         <Route path="/" element={<Login />} />
-        <Route path="/resultados-en-vivo" element={<ResultadosPublicos />} />
+        <Route path="/resultados-en-vivo" element={<ResultadosEnVivo />} />
 
 
         <Route path="/dashboard" element={<DashboardLayout />}>
@@ -34,14 +31,16 @@ function App() {
 
 
           <Route path="transcripcion" element={<Transcripcion />} />
+          <Route path="historial" element={<HistorialActas />} />
           <Route path="usuarios" element={<GestionUsuarios />} />
 
 
           <Route path="geografia" element={<Geografia />} />
-
+          <Route path="mesas" element={<Mesas />} />
 
 
           <Route path="partidos" element={<FrentesPoliticos />} />
+          <Route path="resultados" element={<ResultadosEnVivo />} />
           <Route path="supervision" element={<div className="p-10"> Página de Supervisión</div>} />
 
         </Route>

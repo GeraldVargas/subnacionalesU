@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.js';
 import usuariosRoutes from './routes/usuarios.js';
 import geograficoRoutes from './routes/geografico.js';
 import frentesRoutes from './routes/frentes.js';
+import votosRoutes from './routes/votos.js';
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/geografico', geograficoRoutes);
 app.use('/api/frentes', frentesRoutes);
+app.use('/api/votos', votosRoutes);
 
 // Ruta de prueba
 app.get('/api/ping', (req, res) => {

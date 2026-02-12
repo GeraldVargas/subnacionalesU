@@ -1,104 +1,285 @@
 import React from 'react';
-import { Users, FileText, AlertCircle, CheckCircle2, TrendingUp, Clock } from 'lucide-react';
+import { Users, Shield, Vote, Grid3x3, UserCircle2, MapPin, Calendar, ChevronRight, CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const DashboardHome = () => {
-  
-  const user = JSON.parse(localStorage.getItem('usuario')) || { rol: 'Invitado' };
+  const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('usuario')) || { nombre_usuario: 'admin', rol: 'Administrador del Sistema' };
+
+  // Fecha y hora actual
+  const now = new Date();
+  const fechaHora = now.toLocaleString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
 
   return (
-    <div className="p-8 bg-gray-50/50 min-h-screen">
-      
-      {/* 1. Saludo  */}
-      <header className="mb-8">
-        <h1 className="text-3xl font-extrabold text-gray-900">Hola, {user.nombre_usuario} </h1>
-        <p className="text-gray-500 mt-1">
-            Panel de control para <span className="font-bold text-[#E31E24]">{user.rol}</span>.
-        </p>
-      </header>
+    <div className="min-h-screen bg-gray-100">
+      {/* Header con título y fecha */}
+      <div className="bg-gray-800 text-white px-8 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Calendar className="w-5 h-5" />
+          <span className="text-sm font-medium">{fechaHora}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <UserCircle2 className="w-5 h-5" />
+          <span className="text-sm font-medium">{user.nombre_usuario}</span>
+        </div>
+      </div>
 
-      {/* 2. CONTENIDO SEGÚN ROL */}
-      
-      {/* --- VISTA DE ADMINISTRADOR --- */}
-      {user.rol === 'Administrador del Sistema' && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <StatCard title="Usuarios Totales" value="124" icon={<Users className="text-blue-500"/>} color="border-blue-500" />
-            <StatCard title="Mesas Habilitadas" value="1,250" icon={<FileText className="text-purple-500"/>} color="border-purple-500" />
-            <StatCard title="Avance Global" value="68%" icon={<TrendingUp className="text-green-500"/>} color="border-green-500" />
-            <StatCard title="Incidencias" value="12" icon={<AlertCircle className="text-red-500"/>} color="border-red-500" />
+      {/* Contenido principal */}
+      <div className="p-8">
+        {/* Título y botones */}
+        <div className="mb-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Panel General</h1>
+              <p className="text-gray-600">Resumen rápido del sistema y accesos directos.</p>
+            </div>
+            <div className="flex gap-3">
+              <button 
+                className="flex items-center gap-2 bg-gray-300 text-gray-500 px-6 py-2.5 rounded-lg font-medium cursor-not-allowed"
+                disabled
+              >
+                <Vote className="w-5 h-5" />
+                Ver votos
+              </button>
+              <button 
+                onClick={() => navigate('/dashboard/usuarios')}
+                className="flex items-center gap-2 bg-gray-200 text-gray-800 px-6 py-2.5 rounded-lg font-medium hover:bg-gray-300 transition"
+              >
+                <Users className="w-5 h-5" />
+                Usuarios
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Tarjetas de estadísticas */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <StatCard 
+            title="USUARIOS" 
+            value="1" 
+            subtitle="Registrados"
+            icon={<Users className="w-8 h-8" />}
+            bgColor="bg-[#E31E24]"
+          />
+          <StatCard 
+            title="ROLES" 
+            value="2" 
+            subtitle="Spatie"
+            icon={<Shield className="w-8 h-8" />}
+            bgColor="bg-yellow-500"
+          />
+          <StatCard 
+            title="TIPOS DE ELECCIÓN" 
+            value="0" 
+            subtitle="Catálogo"
+            icon={<Vote className="w-8 h-8" />}
+            bgColor="bg-[#E31E24]"
+          />
+          <StatCard 
+            title="MESAS" 
+            value="0" 
+            subtitle="Registradas"
+            icon={<Grid3x3 className="w-8 h-8" />}
+            bgColor="bg-yellow-500"
+          />
+        </div>
+
+        {/* Sección de accesos rápidos y resumen */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Accesos rápidos */}
+          <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-2">Accesos rápidos</h2>
+            <p className="text-sm text-gray-600 mb-6">Ir directo a módulos</p>
             
-            <div className="md:col-span-4 mt-6 p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
-                <h3 className="font-bold text-gray-800 mb-4">Actividad Reciente del Sistema</h3>
-                
-                <div className="h-48 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400">
-                    [Gráfico de barras: Votos por hora]
+            <div className="grid grid-cols-2 gap-4">
+              <QuickAccessButton 
+                icon={<Users className="w-6 h-6" />}
+                title="Usuarios"
+                subtitle="Gestionar cuentas"
+                bgColor="bg-pink-50"
+                iconColor="text-pink-600"
+                onClick={() => navigate('/dashboard/usuarios')}
+              />
+              <QuickAccessButton 
+                icon={<Shield className="w-6 h-6" />}
+                title="Roles"
+                subtitle="Permisos / perfiles"
+                bgColor="bg-gray-50"
+                iconColor="text-gray-400"
+                disabled
+              />
+              <QuickAccessButton 
+                icon={<Vote className="w-6 h-6" />}
+                title="Tipo elección"
+                subtitle="Administrar catálogo"
+                bgColor="bg-gray-50"
+                iconColor="text-gray-400"
+                disabled
+              />
+              <QuickAccessButton 
+                icon={<MapPin className="w-6 h-6" />}
+                title="Geográfico"
+                subtitle="Depto / provincia"
+                bgColor="bg-pink-50"
+                iconColor="text-pink-600"
+                onClick={() => navigate('/dashboard/geografia')}
+              />
+              <QuickAccessButton 
+                icon={<Grid3x3 className="w-6 h-6" />}
+                title="Mesas"
+                subtitle="Registro y control"
+                bgColor="bg-gray-50"
+                iconColor="text-gray-400"
+                disabled
+              />
+              <QuickAccessButton 
+                icon={<Vote className="w-6 h-6" />}
+                title="Votos"
+                subtitle="Ver y registrar"
+                bgColor="bg-gray-50"
+                iconColor="text-gray-400"
+                disabled
+              />
+            </div>
+          </div>
+
+          {/* Resumen */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-2">Resumen</h2>
+            <p className="text-sm text-gray-600 mb-6">Estado del sistema</p>
+            
+            <div className="space-y-4 mb-6">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Fecha / hora</span>
+                <span className="text-sm font-semibold text-gray-900">{fechaHora}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Usuario</span>
+                <span className="text-sm font-semibold text-gray-900">{user.nombre_usuario}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Geográfico</span>
+                <span className="text-sm font-semibold text-gray-900">0</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Votos registrados</span>
+                <span className="text-sm font-semibold text-gray-900">0</span>
+              </div>
+              <div className="flex items-center gap-2 pt-2">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span className="text-xs font-semibold text-green-600">Activo</span>
+                <span className="ml-auto text-xs font-semibold text-yellow-600">Admin</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <button 
+                onClick={() => navigate('/dashboard/geografia')}
+                className="w-full flex items-center justify-between bg-gray-100 hover:bg-gray-200 px-4 py-3 rounded-lg transition group"
+              >
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-5 h-5 text-gray-700" />
+                  <span className="text-sm font-medium text-gray-900">Ver geográfico</span>
                 </div>
-            </div>
-        </div>
-      )}
-
-      {/* --- VISTA DE TRANSCRIPTOR --- */}
-      {user.rol === 'Transcriptor de Actas' && (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard title="Mis Actas Hoy" value="15" icon={<FileText className="text-blue-500"/>} color="border-blue-500" />
-                <StatCard title="Tiempo Promedio" value="4m 20s" icon={<Clock className="text-orange-500"/>} color="border-orange-500" />
-                <StatCard title="Eficiencia" value="98%" icon={<TrendingUp className="text-green-500"/>} color="border-green-500" />
-            </div>
-
-            <div className="bg-[#E31E24] rounded-2xl p-8 text-white shadow-xl flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold mb-2">¿Listo para continuar?</h2>
-                    <p className="text-red-100">Tienes 5 actas asignadas esperando transcripción.</p>
+                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+              </button>
+              <button 
+                disabled
+                className="w-full flex items-center justify-between bg-gray-200 px-4 py-3 rounded-lg cursor-not-allowed opacity-50"
+              >
+                <div className="flex items-center gap-3">
+                  <Grid3x3 className="w-5 h-5 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-600">Ver mesas</span>
                 </div>
-                <button className="bg-white text-[#E31E24] px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-yellow-50 transition transform hover:scale-105">
-                    Comenzar Transcripción
-                </button>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              </button>
             </div>
+          </div>
         </div>
-      )}
 
-      {/* --- VISTA DE VALIDADOR --- */}
-      {user.rol === 'Validador de Actas' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StatCard title="Por Validar" value="45" icon={<AlertCircle className="text-orange-500"/>} color="border-orange-500" />
-            <StatCard title="Aprobadas Hoy" value="120" icon={<CheckCircle2 className="text-green-500"/>} color="border-green-500" />
-            <StatCard title="Rechazadas" value="3" icon={<AlertCircle className="text-red-500"/>} color="border-red-500" />
-
-            <div className="md:col-span-3 mt-6">
-                <h3 className="font-bold text-gray-800 mb-4 text-lg">Cola de Validación Prioritaria</h3>
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    {[1,2,3].map(i => (
-                        <div key={i} className="p-4 border-b border-gray-50 flex justify-between items-center hover:bg-gray-50 transition">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center font-bold text-gray-500">M{i}</div>
-                                <div>
-                                    <p className="font-bold text-gray-800">Mesa #{4500 + i}</p>
-                                    <p className="text-xs text-gray-500">Recinto: Colegio San Agustín</p>
-                                </div>
-                            </div>
-                            <button className="text-blue-600 font-bold text-sm hover:underline">Revisar</button>
-                        </div>
-                    ))}
-                </div>
+        {/* Últimos votos */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Últimos votos</h2>
+              <p className="text-sm text-gray-600">Últimos registros (si aplica)</p>
             </div>
+            <button 
+              disabled
+              className="text-gray-400 font-medium text-sm cursor-not-allowed flex items-center gap-1"
+            >
+              Ver todo
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">FECHA</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">DETALLE</th>
+                  <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase">TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colSpan="3" className="text-center py-8 text-gray-400 text-sm">
+                    No hay votos registrados aún
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-      )}
-
+      </div>
     </div>
   );
 };
 
-// Componente Tarjeta Simple
-const StatCard = ({ title, value, icon, color }) => (
-    <div className={`bg-white p-6 rounded-2xl shadow-sm border-l-4 ${color} flex items-center justify-between`}>
-        <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{title}</p>
-            <h3 className="text-3xl font-black text-gray-800">{value}</h3>
-        </div>
-        <div className="p-3 bg-gray-50 rounded-xl">
-            {icon}
-        </div>
+// Componente de tarjeta de estadística
+const StatCard = ({ title, value, subtitle, icon, bgColor }) => (
+  <div className="bg-white rounded-lg shadow-sm p-6 flex items-center justify-between">
+    <div className="flex items-start gap-4">
+      <div className={`${bgColor} text-white p-3 rounded-lg`}>
+        {icon}
+      </div>
+      <div>
+        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">{title}</p>
+        <h3 className="text-3xl font-bold text-gray-900 mb-1">{value}</h3>
+        <p className="text-sm text-gray-500">{subtitle}</p>
+      </div>
     </div>
+  </div>
+);
+
+// Componente de botón de acceso rápido
+const QuickAccessButton = ({ icon, title, subtitle, bgColor, iconColor, onClick, disabled }) => (
+  <button 
+    onClick={onClick}
+    disabled={disabled}
+    className={`flex items-start gap-3 p-4 rounded-lg border border-gray-200 transition group text-left ${
+      disabled 
+        ? 'cursor-not-allowed opacity-50' 
+        : 'hover:border-gray-300 hover:shadow-sm'
+    }`}
+  >
+    <div className={`${bgColor} ${iconColor} p-2 rounded-lg ${!disabled && 'group-hover:scale-110'} transition`}>
+      {icon}
+    </div>
+    <div className="flex-1 min-w-0">
+      <h3 className="text-sm font-semibold text-gray-900 mb-0.5">{title}</h3>
+      <p className="text-xs text-gray-500">{subtitle}</p>
+    </div>
+    <ChevronRight className={`w-4 h-4 mt-1 flex-shrink-0 ${disabled ? 'text-gray-300' : 'text-gray-400 group-hover:text-gray-600'}`} />
+  </button>
 );
 
 export default DashboardHome;

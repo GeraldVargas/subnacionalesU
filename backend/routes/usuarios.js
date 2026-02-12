@@ -56,6 +56,7 @@ router.get('/', async (req, res) => {
         const usuarios = result.rows.map(u => ({
             id_usuario: u.id_usuario,
             nombre_usuario: u.nombre_usuario,
+            id_rol: u.id_rol,
             activo: !u.fecha_fin || new Date(u.fecha_fin) > new Date(),
             persona: {
                 nombre: u.nombre,
@@ -85,19 +86,30 @@ router.get('/', async (req, res) => {
 
 // POST /api/usuarios - Crear nuevo usuario
 router.post('/', async (req, res) => {
-    const {
+    let {
         nombre_usuario,
         contrasena,
         id_rol,
         persona
     } = req.body;
 
+    // Convertir id_rol a número si viene como string
+    id_rol = parseInt(id_rol);
+
     try {
         // Validaciones
-        if (!nombre_usuario || !contrasena || !id_rol || !persona) {
+        if (!nombre_usuario || !contrasena || !persona) {
             return res.status(400).json({
                 success: false,
                 message: 'Faltan campos requeridos'
+            });
+        }
+
+        // Validar que id_rol sea un número válido
+        if (isNaN(id_rol) || !id_rol) {
+            return res.status(400).json({
+                success: false,
+                message: 'El ID del rol no es válido'
             });
         }
 
@@ -278,19 +290,39 @@ router.get('/:id', async (req, res) => {
 // PUT /api/usuarios/:id - Actualizar usuario
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const {
+    let {
         nombre_usuario,
         contrasena,
         id_rol,
         persona
     } = req.body;
 
+    // Convertir id_rol a número si viene como string
+    id_rol = parseInt(id_rol);
+
+    // Log para depuración
+    console.log('📝 Datos recibidos para actualizar usuario:', {
+        id,
+        nombre_usuario,
+        id_rol,
+        tipo_id_rol: typeof id_rol,
+        persona
+    });
+
     try {
         // Validaciones
-        if (!nombre_usuario || !id_rol || !persona) {
+        if (!nombre_usuario || !persona) {
             return res.status(400).json({
                 success: false,
                 message: 'Faltan campos requeridos'
+            });
+        }
+
+        // Validar que id_rol sea un número válido
+        if (isNaN(id_rol) || !id_rol) {
+            return res.status(400).json({
+                success: false,
+                message: 'El ID del rol no es válido'
             });
         }
 

@@ -1,0 +1,644 @@
+import React, { useState, useEffect } from 'react';
+import {
+    Plus,
+    Edit2,
+    Trash2,
+    Building2,
+    Grid3x3,
+    X,
+    Save,
+    Search,
+    MapPin
+} from 'lucide-react';
+
+const Mesas = () => {
+    const [activeTab, setActiveTab] = useState('recintos');
+    const [distritos, setDistritos] = useState([]);
+    const [recintos, setRecintos] = useState([]);
+    const [todosLosRecintos, setTodosLosRecintos] = useState([]); // Lista completa sin filtrar
+    const [mesas, setMesas] = useState([]);
+    const [selectedDistrito, setSelectedDistrito] = useState('');
+    const [selectedRecinto, setSelectedRecinto] = useState('');
+    const [showModal, setShowModal] = useState(false);
+    const [modalType, setModalType] = useState(''); // 'recinto' o 'mesa'
+    const [editingItem, setEditingItem] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    // Estados del formulario
+    const [formRecinto, setFormRecinto] = useState({
+        nombre: '',
+        direccion: '',
+        id_geografico: ''
+    });
+
+    const [formMesa, setFormMesa] = useState({
+        codigo: '',
+        descripcion: '',
+        numero_mesa: '',
+        id_recinto: ''
+    });
+
+    const API_URL = import.meta.env.VITE_API_URL;
+
+    useEffect(() => {
+        cargarDistritos();
+        cargarRecintos();
+        cargarTodosLosRecintos(); // Cargar lista completa al iniciar
+    }, []);
+
+    useEffect(() => {
+        if (selectedRecinto) {
+            cargarMesas(selectedRecinto);
+        }
+    }, [selectedRecinto]);
+
+    useEffect(() => {
+        cargarRecintos();
+    }, [selectedDistrito]);
+
+    const cargarDistritos = async () => {
+        try {
+            const response = await fetch(`${API_URL}/geografico`);
+            const data = await response.json();
+            if (data.success) {
+                const distritosData = data.data.filter(g => 
+                    g.tipo === 'Distrito' || g.tipo === 'Municipio'
+                );
+                setDistritos(distritosData);
+            }
+        } catch (error) {
+            console.error('Error al cargar distritos:', error);
+        }
+    };
+
+    const cargarTodosLosRecintos = async () => {
+        try {
+            const response = await fetch(`${API_URL}/votos/recintos`);
+            const data = await response.json();
+            if (data.success) {
+                setTodosLosRecintos(data.data);
+            }
+        } catch (error) {
+            console.error('Error al cargar todos los recintos:', error);
+        }
+    };
+
+    const cargarRecintos = async () => {
+        try {
+            const url = selectedDistrito 
+                ? `${API_URL}/votos/recintos?id_geografico=${selectedDistrito}`
+                : `${API_URL}/votos/recintos`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.success) {
+                setRecintos(data.data);
+            }
+        } catch (error) {
+            console.error('Error al cargar recintos:', error);
+        }
+    };
+
+    const cargarMesas = async (idRecinto) => {
+        try {
+            const response = await fetch(`${API_URL}/votos/mesas?id_recinto=${idRecinto}`);
+            const data = await response.json();
+            if (data.success) {
+                setMesas(data.data);
+            }
+        } catch (error) {
+            console.error('Error al cargar mesas:', error);
+        }
+    };
+
+    const abrirModal = (tipo, item = null) => {
+        setModalType(tipo);
+        setEditingItem(item);
+        
+        if (tipo === 'recinto') {
+            if (item) {
+                setFormRecinto({
+                    nombre: item.nombre,
+                    direccion: item.direccion || '',
+                    id_geografico: item.id_geografico
+                });
+            } else {
+                setFormRecinto({
+                    nombre: '',
+                    direccion: '',
+                    id_geografico: selectedDistrito || ''
+                });
+            }
+        } else if (tipo === 'mesa') {
+            if (item) {
+                setFormMesa({
+                    codigo: item.codigo,
+                    descripcion: item.descripcion || '',
+                    numero_mesa: item.numero_mesa,
+                    id_recinto: item.id_recinto
+                });
+            } else {
+                setFormMesa({
+                    codigo: '',
+                    descripcion: '',
+                    numero_mesa: '',
+                    id_recinto: selectedRecinto || ''
+                });
+            }
+        }
+        
+        setShowModal(true);
+    };
+
+    const cerrarModal = () => {
+        setShowModal(false);
+        setEditingItem(null);
+        setModalType('');
+        setFormRecinto({ nombre: '', direccion: '', id_geografico: '' });
+        setFormMesa({ codigo: '', descripcion: '', numero_mesa: '', id_recinto: '' });
+    };
+
+    const guardarRecinto = async () => {
+        setLoading(true);
+        
+        try {
+            const url = editingItem 
+                ? `${API_URL}/votos/recintos/${editingItem.id_recinto}`
+                : `${API_URL}/votos/recintos`;
+            
+            const method = editingItem ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formRecinto)
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                alert(data.message);
+                cerrarModal();
+                await cargarRecintos();
+                await cargarTodosLosRecintos(); // Actualizar lista completa
+            } else {
+                alert('Error: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error al guardar recinto:', error);
+            alert('Error al guardar recinto');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const guardarMesa = async () => {
+        setLoading(true);
+        try {
+            const url = editingItem 
+                ? `${API_URL}/votos/mesas/${editingItem.id_mesa}`
+                : `${API_URL}/votos/mesas`;
+            
+            const method = editingItem ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formMesa)
+            });
+
+                await cargarTodosLosRecintos(); // Actualizar lista completa
+            const data = await response.json();
+            
+            if (data.success) {
+                alert(data.message);
+                cerrarModal();
+                if (selectedRecinto) {
+                    await cargarMesas(selectedRecinto);
+                }
+                await cargarRecintos(); // Para actualizar el contador
+            } else {
+                alert('Error: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error al guardar mesa:', error);
+            alert('Error al guardar mesa');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const eliminarRecinto = async (id) => {
+        if (!confirm('¿Estás seguro de eliminar este recinto?')) return;
+
+        try {
+            const response = await fetch(`${API_URL}/votos/recintos/${id}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                alert(data.message);
+                await cargarRecintos();
+                await cargarTodosLosRecintos(); // Actualizar lista completa
+            } else {
+                alert('Error: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error al eliminar recinto:', error);
+            alert('Error al eliminar recinto');
+        }
+    };
+
+    const eliminarMesa = async (id) => {
+        if (!confirm('¿Estás seguro de eliminar esta mesa?')) return;
+
+        try {
+            const response = await fetch(`${API_URL}/votos/mesas/${id}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                alert(data.message);
+                if (selectedRecinto) {
+                    await cargarMesas(selectedRecinto);
+                }
+                await cargarRecintos();
+                await cargarTodosLosRecintos(); // Actualizar lista completa
+            } else {
+                alert('Error: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error al eliminar mesa:', error);
+            alert('Error al eliminar mesa');
+        }
+    };
+
+    return (
+        <div className="p-8 bg-gray-50 min-h-screen">
+            {/* Header */}
+            <div className="mb-8">
+                <h1 className="text-3xl font-black text-gray-900 mb-2">
+                    Gestión de Recintos y Mesas
+                </h1>
+                <p className="text-gray-600">
+                    Administra los recintos electorales y sus mesas de votación
+                </p>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-2 mb-6">
+                <button
+                    onClick={() => setActiveTab('recintos')}
+                    className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition ${
+                        activeTab === 'recintos'
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-white text-gray-600 hover:bg-gray-100'
+                    }`}
+                >
+                    <Building2 className="w-5 h-5" />
+                    Recintos
+                </button>
+                <button
+                    onClick={() => setActiveTab('mesas')}
+                    className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition ${
+                        activeTab === 'mesas'
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-white text-gray-600 hover:bg-gray-100'
+                    }`}
+                >
+                    <Grid3x3 className="w-5 h-5" />
+                    Mesas
+                </button>
+            </div>
+
+            {/* Contenido - Recintos */}
+            {activeTab === 'recintos' && (
+                <div>
+                    {/* Filtros y acciones */}
+                    <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1 flex items-center gap-4">
+                                <div className="flex-1 max-w-md">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Filtrar por Distrito
+                                    </label>
+                                    <select
+                                        value={selectedDistrito}
+                                        onChange={(e) => setSelectedDistrito(e.target.value)}
+                                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
+                                    >
+                                        <option value="">Todos los distritos</option>
+                                        {distritos.map(d => (
+                                            <option key={d.id_geografico} value={d.id_geografico}>
+                                                {d.nombre}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => abrirModal('recinto')}
+                                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition"
+                            >
+                                <Plus className="w-5 h-5" />
+                                Nuevo Recinto
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Lista de Recintos */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {recintos.map(recinto => (
+                            <div key={recinto.id_recinto} className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-3 bg-indigo-100 rounded-xl">
+                                            <Building2 className="w-6 h-6 text-indigo-600" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-gray-900">{recinto.nombre}</h3>
+                                            <p className="text-sm text-gray-600">{recinto.nombre_geografico}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p className="text-sm text-gray-600 mb-4">
+                                    {recinto.direccion || 'Sin dirección'}
+                                </p>
+                                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                                    <span className="text-sm font-semibold text-gray-700">
+                                        {recinto.cantidad_mesas} mesas
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => abrirModal('recinto', recinto)}
+                                            className="p-2 hover:bg-indigo-50 rounded-lg transition"
+                                        >
+                                            <Edit2 className="w-4 h-4 text-indigo-600" />
+                                        </button>
+                                        <button
+                                            onClick={() => eliminarRecinto(recinto.id_recinto)}
+                                            className="p-2 hover:bg-red-50 rounded-lg transition"
+                                        >
+                                            <Trash2 className="w-4 h-4 text-red-600" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Contenido - Mesas */}
+            {activeTab === 'mesas' && (
+                <div>
+                    {/* Selector de Recinto */}
+                    <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1 max-w-md">
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Selecciona un Recinto
+                                </label>
+                                <select
+                                    value={selectedRecinto}
+                                    onChange={(e) => setSelectedRecinto(e.target.value)}
+                                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
+                                >
+                                    <option value="">Selecciona un recinto...</option>
+                                    {todosLosRecintos.map(r => (
+                                        <option key={r.id_recinto} value={r.id_recinto}>
+                                            {r.nombre} ({r.cantidad_mesas} mesas)
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <button
+                                onClick={() => abrirModal('mesa')}
+                                disabled={!selectedRecinto}
+                                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition ${
+                                    selectedRecinto
+                                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                }`}
+                            >
+                                <Plus className="w-5 h-5" />
+                                Nueva Mesa
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Lista de Mesas */}
+                    {selectedRecinto && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {mesas.map(mesa => (
+                                <div key={mesa.id_mesa} className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-green-100 rounded-lg">
+                                                <Grid3x3 className="w-5 h-5 text-green-600" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-gray-900">Mesa {mesa.numero_mesa}</h3>
+                                                <p className="text-xs text-gray-500">{mesa.codigo}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        {mesa.descripcion || 'Sin descripción'}
+                                    </p>
+                                    {mesa.actas_registradas > 0 && (
+                                        <div className="bg-orange-50 text-orange-700 text-xs font-semibold px-3 py-1 rounded-lg mb-3">
+                                            {mesa.actas_registradas} acta(s)
+                                        </div>
+                                    )}
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => abrirModal('mesa', mesa)}
+                                            className="flex-1 p-2 hover:bg-indigo-50 rounded-lg transition"
+                                        >
+                                            <Edit2 className="w-4 h-4 text-indigo-600 mx-auto" />
+                                        </button>
+                                        <button
+                                            onClick={() => eliminarMesa(mesa.id_mesa)}
+                                            className="flex-1 p-2 hover:bg-red-50 rounded-lg transition"
+                                        >
+                                            <Trash2 className="w-4 h-4 text-red-600 mx-auto" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {selectedRecinto && mesas.length === 0 && (
+                        <div className="text-center py-12 text-gray-500">
+                            No hay mesas registradas en este recinto
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Modal */}
+            {showModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
+                        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                            <h2 className="text-xl font-black text-gray-900">
+                                {editingItem ? 'Editar' : 'Nuevo'} {modalType === 'recinto' ? 'Recinto' : 'Mesa'}
+                            </h2>
+                            <button
+                                onClick={cerrarModal}
+                                className="p-2 hover:bg-gray-100 rounded-xl transition"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            {modalType === 'recinto' && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Nombre del Recinto *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formRecinto.nombre}
+                                            onChange={(e) => setFormRecinto({ ...formRecinto, nombre: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
+                                            placeholder="Ej: Unidad Educativa San Agustín"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Dirección
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formRecinto.direccion}
+                                            onChange={(e) => setFormRecinto({ ...formRecinto, direccion: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
+                                            placeholder="Ej: Av. Principal #123"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Distrito *
+                                        </label>
+                                        <select
+                                            value={formRecinto.id_geografico}
+                                            onChange={(e) => setFormRecinto({ ...formRecinto, id_geografico: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
+                                        >
+                                            <option value="">Selecciona un distrito...</option>
+                                            {distritos.map(d => (
+                                                <option key={d.id_geografico} value={d.id_geografico}>
+                                                    {d.nombre}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </>
+                            )}
+
+                            {modalType === 'mesa' && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Código de Mesa *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formMesa.codigo}
+                                            onChange={(e) => setFormMesa({ ...formMesa, codigo: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
+                                            placeholder="Ej: MESA-001"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Número de Mesa *
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={formMesa.numero_mesa}
+                                            onChange={(e) => setFormMesa({ ...formMesa, numero_mesa: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
+                                            placeholder="Ej: 1"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Descripción
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={formMesa.descripcion}
+                                            onChange={(e) => setFormMesa({ ...formMesa, descripcion: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
+                                            placeholder="Ej: Mesa 1 - Zona A"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                            Recinto *
+                                        </label>
+                                        <select
+                                            value={formMesa.id_recinto}
+                                            onChange={(e) => setFormMesa({ ...formMesa, id_recinto: e.target.value })}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
+                                        >
+                                            <option value="">Selecciona un recinto...</option>
+                                            {todosLosRecintos.map(r => (
+                                                <option key={r.id_recinto} value={r.id_recinto}>
+                                                    {r.nombre}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        <div className="p-6 border-t border-gray-200 flex gap-3">
+                            <button
+                                onClick={cerrarModal}
+                                className="flex-1 px-6 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:bg-gray-50 transition"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={modalType === 'recinto' ? guardarRecinto : guardarMesa}
+                                disabled={loading}
+                                className="flex-1 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition flex items-center justify-center gap-2"
+                            >
+                                {loading ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        Guardando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="w-5 h-5" />
+                                        Guardar
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default Mesas;
