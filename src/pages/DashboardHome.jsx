@@ -104,37 +104,7 @@ const DashboardHome = () => {
           <div className="w-32 h-1 bg-gradient-to-r from-[#1E3A8A] to-[#F59E0B] rounded-full mt-4 ml-4"></div>
         </div>
 
-        {/* Tarjetas de estadísticas rápidas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            title="MÓDULOS ACTIVOS"
-            value="7"
-            subtitle="Disponibles"
-            icon={<Layout className="w-6 h-6" />}
-            bgColor="bg-[#1E3A8A]"
-          />
-          <StatCard
-            title="USUARIOS"
-            value="1"
-            subtitle="Registrados"
-            icon={<Users className="w-6 h-6" />}
-            bgColor="bg-[#F59E0B]"
-          />
-          <StatCard
-            title="FRENTES"
-            value="0"
-            subtitle="Políticos"
-            icon={<Flag className="w-6 h-6" />}
-            bgColor="bg-[#10B981]"
-          />
-          <StatCard
-            title="ACTAS"
-            value="0"
-            subtitle="Digitalizadas"
-            icon={<FileText className="w-6 h-6" />}
-            bgColor="bg-[#1E3A8A]"
-          />
-        </div>
+        
 
         {/* Grid principal */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
