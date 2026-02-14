@@ -269,72 +269,125 @@ const ResultadosEnVivo = () => {
                         </div>
                     ) : (
                         <div className="space-y-8">
-                            {/* Gráfico de barras */}
-                            <div className="bg-gray-50 rounded-2xl p-6 pt-14 border border-gray-200">
-                                <div className="flex items-end justify-center gap-6 overflow-x-auto pb-2 min-h-[300px]">
+                            {/* 🎨 GRÁFICO DE BARRAS MEJORADO - ESPACIO OPTIMIZADO */}
+                            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-8 pt-16 border border-gray-200 shadow-inner">
+                                {/* Área de badges de posición - SEPARADA */}
+                                <div className="flex justify-center gap-4 mb-6 px-4">
                                     {resultadosOrdenados.map((frente, index) => {
-                                        const votos = parseInt(frente.total_votos) || 0;
-                                        // 🔥 PORCENTAJE CORREGIDO - Usa totalVotos (incluye nulos y blancos)
-                                        const porcentaje = calcularPorcentaje(votos, totalVotos);
-                                        const barHeight = maxVotos > 0 ? (votos / maxVotos) * 180 : 0;
                                         const esGanador = index === 0;
-
                                         return (
-                                            <div
-                                                key={frente.id_frente}
-                                                className="relative flex flex-col items-center min-w-[100px] group"
-                                            >
-                                                {/* Valor arriba */}
-                                                <div className="text-center mb-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <p className="text-sm font-black text-[#1E3A8A]">
-                                                        {votos.toLocaleString()}
-                                                    </p>
-                                                    <p className="text-xs font-bold text-[#F59E0B]">
-                                                        {porcentaje}%
-                                                    </p>
-                                                </div>
-
-                                                {/* Barra */}
-                                                <div className="w-full h-[200px] flex items-end justify-center">
-                                                    <div className="relative w-12 h-full bg-gray-200 rounded-t-lg overflow-hidden">
-                                                        <div
-                                                            className="absolute bottom-0 left-0 right-0 transition-all duration-1000 ease-out group-hover:brightness-110"
-                                                            style={{
-                                                                height: `${barHeight}px`,
-                                                                backgroundColor: frente.color || '#1E3A8A'
-                                                            }}
-                                                        >
-                                                            {esGanador && (
-                                                                <div className="absolute top-1 left-1/2 -translate-x-1/2">
-                                                                    <Award className="w-4 h-4 text-white" />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Etiqueta abajo */}
-                                                <div className="mt-3 text-center">
-                                                    <p className="text-sm font-black text-[#1E3A8A]">{frente.siglas}</p>
-                                                    <p className="text-[10px] text-gray-500 line-clamp-2 max-w-[100px]">
-                                                        {frente.nombre}
-                                                    </p>
-                                                </div>
-
-                                                {/* Indicador de posición */}
-                                                <div className="absolute -top-2 -right-2 w-6 h-6 bg-[#F59E0B] rounded-full flex items-center justify-center text-xs font-bold text-white">
-                                                    {index + 1}
+                                            <div key={`badge-${frente.id_frente}`} className="min-w-[110px] flex justify-center">
+                                                <div className={`
+                                                    w-10 h-10 rounded-full flex items-center justify-center
+                                                    text-sm font-black text-white shadow-lg
+                                                    ${esGanador 
+                                                        ? 'bg-gradient-to-br from-[#F59E0B] to-[#d97706] ring-4 ring-[#F59E0B]/30 animate-pulse' 
+                                                        : index === 1 
+                                                        ? 'bg-gradient-to-br from-gray-400 to-gray-500 ring-2 ring-gray-300'
+                                                        : index === 2
+                                                        ? 'bg-gradient-to-br from-amber-600 to-amber-700 ring-2 ring-amber-400'
+                                                        : 'bg-gradient-to-br from-[#1E3A8A] to-[#152a63] ring-2 ring-[#1E3A8A]/30'
+                                                    }
+                                                `}>
+                                                    {esGanador && <Trophy className="w-5 h-5" />}
+                                                    {!esGanador && index + 1}
                                                 </div>
                                             </div>
                                         );
                                     })}
                                 </div>
 
-                                <div className="mt-6 flex items-center justify-between text-xs text-gray-500 border-t border-gray-200 pt-4">
-                                    <span>Escala: La barra más alta representa {maxVotos.toLocaleString()} votos</span>
-                                    <span className="flex items-center gap-2">
-                                        <span className="w-3 h-3 bg-[#1E3A8A] rounded"></span>
-                                        <span>Votos por frente</span>
+                                {/* Área de barras */}
+                                <div className="flex items-end justify-center gap-4 overflow-x-auto pb-2 min-h-[350px] px-4">
+                                    {resultadosOrdenados.map((frente, index) => {
+                                        const votos = parseInt(frente.total_votos) || 0;
+                                        const porcentaje = calcularPorcentaje(votos, totalVotos);
+                                        const barHeight = maxVotos > 0 ? (votos / maxVotos) * 200 : 0;
+
+                                        return (
+                                            <div
+                                                key={frente.id_frente}
+                                                className="relative flex flex-col items-center min-w-[110px] group"
+                                            >
+                                                {/* Tooltip de información al hover */}
+                                                <div className="absolute -top-20 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 z-30 pointer-events-none">
+                                                    <div className="bg-[#1E3A8A] text-white px-4 py-2 rounded-xl shadow-xl whitespace-nowrap">
+                                                        <p className="text-sm font-bold">{votos.toLocaleString()} votos</p>
+                                                        <p className="text-xs text-white/80">{porcentaje}% del total</p>
+                                                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-[#1E3A8A]"></div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Barra con diseño mejorado */}
+                                                <div className="w-full h-[240px] flex items-end justify-center pt-8">
+                                                    <div className="relative w-16 h-full">
+                                                        {/* Fondo de la barra */}
+                                                        <div className="absolute bottom-0 left-0 right-0 h-[220px] bg-gray-200 rounded-t-xl overflow-hidden shadow-inner">
+                                                            {/* Barra animada */}
+                                                            <div
+                                                                className="absolute bottom-0 left-0 right-0 transition-all duration-1000 ease-out group-hover:brightness-110 rounded-t-xl overflow-hidden"
+                                                                style={{
+                                                                    height: `${barHeight}px`,
+                                                                    background: `linear-gradient(to top, ${frente.color || '#1E3A8A'}, ${frente.color || '#1E3A8A'}dd)`
+                                                                }}
+                                                            >
+                                                                {/* Brillo en la parte superior */}
+                                                                <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white/30 to-transparent"></div>
+                                                                
+                                                                {/* Valor de votos dentro de la barra */}
+                                                                {barHeight > 40 && (
+                                                                    <div className="absolute top-2 left-1/2 -translate-x-1/2">
+                                                                        <p className="text-white font-black text-sm drop-shadow-lg">
+                                                                            {votos.toLocaleString()}
+                                                                        </p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Etiqueta del frente */}
+                                                <div className="mt-4 text-center">
+                                                    <div 
+                                                        className="w-12 h-12 mx-auto mb-2 rounded-xl shadow-lg flex items-center justify-center"
+                                                        style={{ backgroundColor: frente.color || '#1E3A8A' }}
+                                                    >
+                                                        <p className="text-white font-black text-lg">
+                                                            {frente.siglas?.substring(0, 3)}
+                                                        </p>
+                                                    </div>
+                                                    <p className="text-sm font-bold text-[#1E3A8A]">{frente.siglas}</p>
+                                                    <p className="text-xs text-gray-500 line-clamp-2 max-w-[110px] mt-1">
+                                                        {frente.nombre}
+                                                    </p>
+                                                    <p className="text-xs font-bold text-[#F59E0B] mt-1">
+                                                        {porcentaje}%
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Leyenda mejorada */}
+                                <div className="mt-8 flex items-center justify-between text-xs text-gray-600 border-t border-gray-200 pt-4 px-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2">
+                                            <Trophy className="w-4 h-4 text-[#F59E0B]" />
+                                            <span>1er lugar</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Medal className="w-4 h-4 text-gray-400" />
+                                            <span>2do lugar</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Medal className="w-4 h-4 text-amber-600" />
+                                            <span>3er lugar</span>
+                                        </div>
+                                    </div>
+                                    <span className="text-gray-500">
+                                        Máximo: {maxVotos.toLocaleString()} votos
                                     </span>
                                 </div>
                             </div>
@@ -343,7 +396,6 @@ const ResultadosEnVivo = () => {
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {resultadosOrdenados.map((frente, index) => {
                                     const votos = parseInt(frente.total_votos) || 0;
-                                    // 🔥 PORCENTAJE CORREGIDO - Usa totalVotos (incluye nulos y blancos)
                                     const porcentaje = calcularPorcentaje(votos, totalVotos);
                                     const esGanador = index === 0;
 
