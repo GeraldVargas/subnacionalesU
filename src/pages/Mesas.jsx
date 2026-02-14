@@ -43,7 +43,6 @@ const Mesas = () => {
   });
 
   const API_URL = import.meta.env.VITE_API_URL;
-  const token = localStorage.getItem('token');
 
   useEffect(() => {
     cargarDistritos();
@@ -67,15 +66,18 @@ const Mesas = () => {
 
   const cargarDistritos = async () => {
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/geografico`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       const data = await response.json();
       if (data.success) {
         const distritosData = data.data.filter(g =>
-          ['Distrito', 'Municipio', 'Ciudad'].includes(g.tipo)
+          g.tipo === 'Distrito' || g.tipo === 'Municipio'
         );
-        setDistritos(distritosData.length > 0 ? distritosData : data.data);
+        setDistritos(distritosData);
       }
     } catch (error) {
       console.error('Error al cargar distritos:', error);
@@ -84,9 +86,7 @@ const Mesas = () => {
 
   const cargarTodosLosRecintos = async () => {
     try {
-      const response = await fetch(`${API_URL}/votos/recintos`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await fetch(`${API_URL}/votos/recintos`);
       const data = await response.json();
       if (data.success) {
         setTodosLosRecintos(data.data);
@@ -102,9 +102,7 @@ const Mesas = () => {
         ? `${API_URL}/votos/recintos?id_geografico=${selectedDistrito}`
         : `${API_URL}/votos/recintos`;
 
-      const response = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await fetch(url);
       const data = await response.json();
 
       if (data.success) {
@@ -117,9 +115,7 @@ const Mesas = () => {
 
   const cargarMesas = async (idRecinto) => {
     try {
-      const response = await fetch(`${API_URL}/votos/mesas?id_recinto=${idRecinto}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await fetch(`${API_URL}/votos/mesas?id_recinto=${idRecinto}`);
       const data = await response.json();
       if (data.success) {
         setMesas(data.data);
@@ -188,10 +184,7 @@ const Mesas = () => {
 
       const response = await fetch(url, {
         method,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formRecinto)
       });
 
@@ -224,10 +217,7 @@ const Mesas = () => {
 
       const response = await fetch(url, {
         method,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formMesa)
       });
 
@@ -257,8 +247,7 @@ const Mesas = () => {
 
     try {
       const response = await fetch(`${API_URL}/votos/recintos/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: 'DELETE'
       });
 
       const data = await response.json();
@@ -281,8 +270,7 @@ const Mesas = () => {
 
     try {
       const response = await fetch(`${API_URL}/votos/mesas/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: 'DELETE'
       });
 
       const data = await response.json();
@@ -312,7 +300,7 @@ const Mesas = () => {
     <div className="p-8 bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-[#1E3A8A] mb-2">
+        <h1 className="text-3xl font-black text-gray-900 mb-2">
           Gestión de Recintos y Mesas
         </h1>
         <p className="text-gray-600">
@@ -320,14 +308,14 @@ const Mesas = () => {
         </p>
       </div>
 
-      {/* Tabs con colores NGP */}
+      {/* Tabs */}
       <div className="flex gap-2 mb-6">
         <button
           onClick={() => setActiveTab('recintos')}
           className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition ${
             activeTab === 'recintos'
-              ? 'bg-[#1E3A8A] text-white'
-              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              ? 'bg-indigo-600 text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-100'
           }`}
         >
           <Building2 className="w-5 h-5" />
@@ -337,8 +325,8 @@ const Mesas = () => {
           onClick={() => setActiveTab('mesas')}
           className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition ${
             activeTab === 'mesas'
-              ? 'bg-[#1E3A8A] text-white'
-              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              ? 'bg-indigo-600 text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-100'
           }`}
         >
           <Grid3x3 className="w-5 h-5" />
@@ -350,7 +338,7 @@ const Mesas = () => {
       {activeTab === 'recintos' && (
         <div>
           {/* Filtros y acciones */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 border border-gray-200">
+          <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1 flex items-center gap-4">
                 <div className="flex-1 max-w-md">
@@ -360,7 +348,7 @@ const Mesas = () => {
                   <select
                     value={selectedDistrito}
                     onChange={(e) => setSelectedDistrito(e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none"
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
                   >
                     <option value="">Todos los distritos</option>
                     {distritos.map(d => (
@@ -373,7 +361,7 @@ const Mesas = () => {
               </div>
               <button
                 onClick={() => abrirModal('recinto')}
-                className="flex items-center gap-2 bg-[#1E3A8A] hover:bg-[#152a63] text-white px-6 py-3 rounded-xl font-bold transition shadow-lg"
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition"
               >
                 <Plus className="w-5 h-5" />
                 Nuevo Recinto
@@ -384,14 +372,14 @@ const Mesas = () => {
           {/* Lista de Recintos */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {recintos.map(recinto => (
-              <div key={recinto.id_recinto} className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition border-l-4 border-[#1E3A8A]">
+              <div key={recinto.id_recinto} className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-3 bg-[#1E3A8A] bg-opacity-10 rounded-xl">
-                      <Building2 className="w-6 h-6 text-[#1E3A8A]" />
+                    <div className="p-3 bg-indigo-100 rounded-xl">
+                      <Building2 className="w-6 h-6 text-indigo-600" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-[#1E3A8A]">{recinto.nombre}</h3>
+                      <h3 className="font-bold text-gray-900">{recinto.nombre}</h3>
                       <p className="text-sm text-gray-600">{recinto.nombre_geografico}</p>
                     </div>
                   </div>
@@ -400,15 +388,15 @@ const Mesas = () => {
                   {recinto.direccion || 'Sin dirección'}
                 </p>
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  <span className="text-sm font-semibold text-[#F59E0B]">
+                  <span className="text-sm font-semibold text-gray-700">
                     {recinto.cantidad_mesas} mesas
                   </span>
                   <div className="flex gap-2">
                     <button
                       onClick={() => abrirModal('recinto', recinto)}
-                      className="p-2 hover:bg-[#F59E0B] hover:bg-opacity-10 rounded-lg transition"
+                      className="p-2 hover:bg-indigo-50 rounded-lg transition"
                     >
-                      <Edit2 className="w-4 h-4 text-[#F59E0B]" />
+                      <Edit2 className="w-4 h-4 text-indigo-600" />
                     </button>
                     <button
                       onClick={() => eliminarRecinto(recinto.id_recinto)}
@@ -428,7 +416,7 @@ const Mesas = () => {
       {activeTab === 'mesas' && (
         <div>
           {/* Selector de Recinto + Buscador */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 border border-gray-200">
+          <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
 
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -440,7 +428,7 @@ const Mesas = () => {
                   <select
                     value={selectedRecinto}
                     onChange={(e) => setSelectedRecinto(e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none"
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
                   >
                     <option value="">Selecciona un recinto...</option>
                     {todosLosRecintos.map(r => (
@@ -463,7 +451,7 @@ const Mesas = () => {
                       value={buscarCodigo}
                       onChange={(e) => setBuscarCodigo(e.target.value)}
                       disabled={!selectedRecinto}
-                      className="w-full pl-11 pr-4 py-2 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none disabled:bg-gray-100"
+                      className="w-full pl-11 pr-4 py-2 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none disabled:bg-gray-100"
                       placeholder={selectedRecinto ? "Ej: 1A-123, MESA-001..." : "Primero selecciona un recinto"}
                     />
                   </div>
@@ -475,7 +463,7 @@ const Mesas = () => {
                 disabled={!selectedRecinto}
                 className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition ${
                   selectedRecinto
-                    ? 'bg-[#F59E0B] hover:bg-[#e68906] text-white shadow-lg'
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
               >
@@ -489,14 +477,14 @@ const Mesas = () => {
           {selectedRecinto && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {mesasFiltradas.map(mesa => (
-                <div key={mesa.id_mesa} className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition border-l-4 border-[#10B981]">
+                <div key={mesa.id_mesa} className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-[#10B981] bg-opacity-10 rounded-lg">
-                        <Grid3x3 className="w-5 h-5 text-[#10B981]" />
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <Grid3x3 className="w-5 h-5 text-green-600" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-[#1E3A8A]">Mesa {mesa.numero_mesa}</h3>
+                        <h3 className="font-bold text-gray-900">Mesa {mesa.numero_mesa}</h3>
                         <p className="text-xs text-gray-500">{mesa.codigo}</p>
                       </div>
                     </div>
@@ -505,16 +493,16 @@ const Mesas = () => {
                     {mesa.descripcion || 'Sin descripción'}
                   </p>
                   {mesa.actas_registradas > 0 && (
-                    <div className="bg-[#F59E0B] bg-opacity-10 text-[#F59E0B] text-xs font-semibold px-3 py-1 rounded-lg mb-3 border border-[#F59E0B] border-opacity-30">
-                      {mesa.actas_registradas} acta(s) registrada(s)
+                    <div className="bg-orange-50 text-orange-700 text-xs font-semibold px-3 py-1 rounded-lg mb-3">
+                      {mesa.actas_registradas} acta(s)
                     </div>
                   )}
                   <div className="flex gap-2">
                     <button
                       onClick={() => abrirModal('mesa', mesa)}
-                      className="flex-1 p-2 hover:bg-[#F59E0B] hover:bg-opacity-10 rounded-lg transition"
+                      className="flex-1 p-2 hover:bg-indigo-50 rounded-lg transition"
                     >
-                      <Edit2 className="w-4 h-4 text-[#F59E0B] mx-auto" />
+                      <Edit2 className="w-4 h-4 text-indigo-600 mx-auto" />
                     </button>
                     <button
                       onClick={() => eliminarMesa(mesa.id_mesa)}
@@ -529,32 +517,30 @@ const Mesas = () => {
           )}
 
           {selectedRecinto && mesasFiltradas.length === 0 && (
-            <div className="text-center py-12 text-gray-500 bg-white rounded-2xl border border-gray-200">
-              <Grid3x3 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-lg">No Se Encontraron Mesas Con Ese Código</p>
+            <div className="text-center py-12 text-gray-500">
+              No Se Encontraron Mesas Con Ese Código
             </div>
           )}
 
           {(!selectedRecinto) && (
-            <div className="text-center py-12 text-gray-500 bg-white rounded-2xl border border-gray-200">
-              <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-lg">Selecciona Un Recinto Para Ver Sus Mesas</p>
+            <div className="text-center py-12 text-gray-500">
+              Selecciona Un Recinto Para Ver Sus Mesas
             </div>
           )}
         </div>
       )}
 
-      {/* Modal con colores NGP */}
+      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white rounded-t-3xl">
-              <h2 className="text-xl font-black">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-black text-gray-900">
                 {editingItem ? 'Editar' : 'Nuevo'} {modalType === 'recinto' ? 'Recinto' : 'Mesa'}
               </h2>
               <button
                 onClick={cerrarModal}
-                className="p-2 hover:bg-white/10 rounded-xl transition"
+                className="p-2 hover:bg-gray-100 rounded-xl transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -571,7 +557,7 @@ const Mesas = () => {
                       type="text"
                       value={formRecinto.nombre}
                       onChange={(e) => setFormRecinto({ ...formRecinto, nombre: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
                       placeholder="Ej: Unidad Educativa San Agustín"
                     />
                   </div>
@@ -583,7 +569,7 @@ const Mesas = () => {
                       type="text"
                       value={formRecinto.direccion}
                       onChange={(e) => setFormRecinto({ ...formRecinto, direccion: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
                       placeholder="Ej: Av. Principal #123"
                     />
                   </div>
@@ -594,7 +580,7 @@ const Mesas = () => {
                     <select
                       value={formRecinto.id_geografico}
                       onChange={(e) => setFormRecinto({ ...formRecinto, id_geografico: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
                     >
                       <option value="">Selecciona un distrito...</option>
                       {distritos.map(d => (
@@ -617,7 +603,7 @@ const Mesas = () => {
                       type="text"
                       value={formMesa.codigo}
                       onChange={(e) => setFormMesa({ ...formMesa, codigo: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
                       placeholder="Ej: MESA-001"
                     />
                   </div>
@@ -629,7 +615,7 @@ const Mesas = () => {
                       type="number"
                       value={formMesa.numero_mesa}
                       onChange={(e) => setFormMesa({ ...formMesa, numero_mesa: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
                       placeholder="Ej: 1"
                     />
                   </div>
@@ -641,7 +627,7 @@ const Mesas = () => {
                       type="text"
                       value={formMesa.descripcion}
                       onChange={(e) => setFormMesa({ ...formMesa, descripcion: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
                       placeholder="Ej: Mesa 1 - Zona A"
                     />
                   </div>
@@ -652,7 +638,7 @@ const Mesas = () => {
                     <select
                       value={formMesa.id_recinto}
                       onChange={(e) => setFormMesa({ ...formMesa, id_recinto: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
                     >
                       <option value="">Selecciona un recinto...</option>
                       {todosLosRecintos.map(r => (
@@ -676,7 +662,7 @@ const Mesas = () => {
               <button
                 onClick={modalType === 'recinto' ? guardarRecinto : guardarMesa}
                 disabled={loading}
-                className="flex-1 px-6 py-3 bg-[#1E3A8A] hover:bg-[#152a63] text-white rounded-xl font-bold transition flex items-center justify-center gap-2"
+                className="flex-1 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
