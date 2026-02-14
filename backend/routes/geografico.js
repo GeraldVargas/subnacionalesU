@@ -96,6 +96,7 @@ router.post('/tipos/reasignar', verificarToken, async (req, res) => {
 
 // DELETE - Eliminar tipo (requiere que NO existan registros con ese tipo)
 // Si quieres eliminarlo "a la fuerza", primero reasigna o borra los registros.
+// DELETE - Eliminar tipo (requiere que NO existan registros con ese tipo)
 router.delete('/tipos/:tipo', verificarToken, async (req, res) => {
   try {
     const tipo = decodeURIComponent(req.params.tipo || '').trim();
@@ -129,7 +130,6 @@ router.delete('/tipos/:tipo', verificarToken, async (req, res) => {
     res.status(500).json({ success: false, message: 'Error al eliminar tipo' });
   }
 });
-
 /**
  * ==========================
  * ✅ RUTAS DE REGISTROS (CRUD)

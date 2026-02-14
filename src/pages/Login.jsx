@@ -76,7 +76,7 @@ const Login = () => {
           <div className="flex flex-col items-center mb-6">
             <div className="bg-white p-3 rounded-2xl shadow-lg mb-4 transform hover:scale-105 transition-transform">
               <img
-                src="/LOGO NELSON 2026-2031.JPG"
+                src="/NGP.JPG"
                 alt="Logo Unidos"
                 className="w-24 h-auto object-contain"
               />
