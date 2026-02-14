@@ -2,6 +2,20 @@ import express from 'express';
 import pool from '../database.js';
 
 const router = express.Router();
+// Middleware de autenticación
+const verificarToken = (req, res, next) => {
+    const token = req.headers.authorization?.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ 
+            success: false,
+            message: 'Token no proporcionado' 
+        });
+    }
+
+    // Aquí podrías validar JWT si quieres
+    next();
+};
 
 // GET /api/geografico - Obtener todos los registros geográficos
 router.get('/', async (req, res) => {
@@ -270,6 +284,45 @@ router.get('/:id', async (req, res) => {
             error: error.message
         });
     }
+});
+// POST - Reasignar tipo (para poder "eliminar" un tipo)
+router.post('/tipos/reasignar', verificarToken, async (req, res) => {
+  try {
+    const { tipo_origen, tipo_destino } = req.body;
+
+    if (!tipo_origen || !tipo_destino) {
+      return res.status(400).json({
+        success: false,
+        message: 'tipo_origen y tipo_destino son obligatorios'
+      });
+    }
+
+    if (tipo_origen === tipo_destino) {
+      return res.status(400).json({
+        success: false,
+        message: 'tipo_origen y tipo_destino no pueden ser iguales'
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE geografico
+       SET tipo = $1
+       WHERE tipo = $2`,
+      [tipo_destino, tipo_origen]
+    );
+
+    return res.json({
+      success: true,
+      message: `Se reasignaron ${result.rowCount} registro(s) de "${tipo_origen}" a "${tipo_destino}"`,
+      data: { updated: result.rowCount }
+    });
+  } catch (error) {
+    console.error('Error al reasignar tipo:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error al reasignar tipo'
+    });
+  }
 });
 
 export default router;
