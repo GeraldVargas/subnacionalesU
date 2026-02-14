@@ -336,15 +336,7 @@ const HistorialActas = () => {
                     <p className="text-4xl font-black text-[#F59E0B]">{estadisticas.registradas}</p>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#10B981] hover:shadow-xl transition-all">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-[#10B981] bg-opacity-10 rounded-lg">
-                            <CheckCircle className="w-5 h-5 text-[#10B981]" />
-                        </div>
-                        <span className="text-gray-600 font-semibold">Validadas</span>
-                    </div>
-                    <p className="text-4xl font-black text-[#10B981]">{estadisticas.validadas}</p>
-                </div>
+               
 
                 <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#1E3A8A] hover:shadow-xl transition-all">
                     <div className="flex items-center gap-3 mb-2">
@@ -374,22 +366,7 @@ const HistorialActas = () => {
                             />
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="bg-[#1E3A8A] bg-opacity-10 p-2 rounded-lg">
-                            <Filter className="w-5 h-5 text-[#1E3A8A]" />
-                        </div>
-                        <select
-                            value={filtroEstado}
-                            onChange={(e) => setFiltroEstado(e.target.value)}
-                            className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none transition bg-white"
-                        >
-                            <option value="todos">Filtrar por estado</option>
-                            <option value="registrada">Registradas</option>
-                            <option value="validada">Validadas</option>
-                            <option value="rechazada">Rechazadas</option>
-                            <option value="pendiente">Pendientes</option>
-                        </select>
-                    </div>
+                 
                 </div>
             </div>
 
