@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Save,
   Plus,
@@ -42,7 +42,7 @@ const Transcripcion = () => {
   const [selectedRecinto, setSelectedRecinto] = useState(null);
   const [selectedMesa, setSelectedMesa] = useState(null);
 
-  // Votos (guardar como string mientras se escribe)
+  // Votos (GUARDAR COMO STRING MIENTRAS SE ESCRIBE)
   const [votosAlcalde, setVotosAlcalde] = useState([]);
   const [votosConcejal, setVotosConcejal] = useState([]);
   const [votosNulos, setVotosNulos] = useState('');
@@ -56,23 +56,10 @@ const Transcripcion = () => {
   const API_URL = import.meta.env.VITE_API_URL;
   const token = localStorage.getItem('token');
 
-  // Ref para evitar “saltitos” en el scroll del modal al escribir en inputs
-  const modalBodyRef = useRef(null);
-  const lastScrollTopRef = useRef(0);
-
   const toInt = (v) => {
     const n = parseInt(String(v ?? '').replace(/[^0-9]/g, ''), 10);
     return Number.isFinite(n) ? n : 0;
   };
-
-  const keepModalScroll = useCallback(() => {
-    const el = modalBodyRef.current;
-    if (!el) return;
-    const top = lastScrollTopRef.current;
-    requestAnimationFrame(() => {
-      if (modalBodyRef.current) modalBodyRef.current.scrollTop = top;
-    });
-  }, []);
 
   // Cargar distritos al abrir modal
   useEffect(() => {
@@ -170,7 +157,7 @@ const Transcripcion = () => {
           nombre: f.nombre,
           siglas: f.siglas,
           color: f.color,
-          cantidad: '' // string
+          cantidad: '' // STRING
         }));
         setVotosAlcalde(votosIniciales);
         setVotosConcejal(JSON.parse(JSON.stringify(votosIniciales)));
@@ -210,11 +197,11 @@ const Transcripcion = () => {
     setCurrentStep(4);
   };
 
-  // Guardar como string mientras escribe
-  const updateVotos = (tipo, idFrente, value) => {
+  // IMPORTANTE: NO PARSEAR A NÚMERO AQUÍ (para que deje escribir varios dígitos)
+  const updateVotos = (tipo, idFrente, valueStr) => {
     const setVotos = tipo === 'alcalde' ? setVotosAlcalde : setVotosConcejal;
     setVotos((prev) =>
-      prev.map((v) => (v.id_frente === idFrente ? { ...v, cantidad: value } : v))
+      prev.map((v) => (v.id_frente === idFrente ? { ...v, cantidad: valueStr } : v))
     );
   };
 
@@ -246,7 +233,6 @@ const Transcripcion = () => {
   };
 
   const handleRegistrarActa = async () => {
-    // Validar que haya votos registrados
     const hayVotosAlcalde = votosAlcalde.some((v) => toInt(v.cantidad) > 0);
     const hayVotosConcejal = votosConcejal.some((v) => toInt(v.cantidad) > 0);
 
@@ -284,9 +270,7 @@ const Transcripcion = () => {
 
       const response = await fetch(`${API_URL}/votos/registrar-acta`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${tokenLocal}`
-        },
+        headers: { Authorization: `Bearer ${tokenLocal}` },
         body: formData
       });
 
@@ -295,9 +279,7 @@ const Transcripcion = () => {
       if (data.success) {
         mostrarNotificacion('success', '¡Acta registrada exitosamente!');
         window.dispatchEvent(
-          new CustomEvent('acta-registrada', {
-            detail: { id_acta: data.data.id_acta }
-          })
+          new CustomEvent('acta-registrada', { detail: { id_acta: data.data.id_acta } })
         );
 
         setTimeout(() => {
@@ -332,7 +314,7 @@ const Transcripcion = () => {
         nombre: f.nombre,
         siglas: f.siglas,
         color: f.color,
-        cantidad: '' // string
+        cantidad: '' // STRING
       }));
       setVotosAlcalde(votosIniciales);
       setVotosConcejal(JSON.parse(JSON.stringify(votosIniciales)));
@@ -357,18 +339,20 @@ const Transcripcion = () => {
           </div>
         </div>
 
+        {/* CLAVE: value string + onChange string (sin parseInt) */}
         <input
           type="text"
           inputMode="numeric"
+          enterKeyHint="done"
+          autoComplete="off"
           value={String(frente.cantidad ?? '')}
-          onFocus={() => {
-            if (modalBodyRef.current) lastScrollTopRef.current = modalBodyRef.current.scrollTop;
+          onFocus={(e) => {
+            // para que sea fácil reemplazar el número
+            e.target.select();
           }}
           onChange={(e) => {
-            if (modalBodyRef.current) lastScrollTopRef.current = modalBodyRef.current.scrollTop;
             const cleaned = e.target.value.replace(/[^0-9]/g, '');
             updateVotos(tipo, frente.id_frente, cleaned);
-            keepModalScroll();
           }}
           className="w-20 text-center text-xl font-bold border border-gray-300 rounded-lg py-2 focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A] focus:outline-none"
           placeholder="0"
@@ -408,7 +392,6 @@ const Transcripcion = () => {
 
       {/* Contenido principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Mensaje de bienvenida */}
         <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 p-12 text-center shadow-sm">
           <div className="w-20 h-20 bg-gradient-to-br from-[#1E3A8A] to-[#152a63] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
             <ClipboardCheck className="w-10 h-10 text-white" />
@@ -507,9 +490,11 @@ const Transcripcion = () => {
 
             {/* Contenido del Modal */}
             <div
-              ref={modalBodyRef}
               className="p-6 max-h-[calc(90vh-200px)] overflow-y-auto overscroll-contain"
-              style={{ scrollbarGutter: 'stable' }}
+              style={{
+                scrollbarGutter: 'stable',
+                overflowAnchor: 'none' // ayuda a que no “salte” por scroll anchoring
+              }}
             >
               {/* Paso 1: Seleccionar Distrito */}
               {currentStep === 1 && (
@@ -661,7 +646,6 @@ const Transcripcion = () => {
                     Volver
                   </button>
 
-                  {/* Resumen de selección */}
                   <div className="bg-gradient-to-r from-[#1E3A8A] to-[#152a63] rounded-xl p-4 mb-6 text-white">
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div>
@@ -714,15 +698,11 @@ const Transcripcion = () => {
                       <input
                         type="text"
                         inputMode="numeric"
+                        enterKeyHint="done"
+                        autoComplete="off"
                         value={String(votosNulos ?? '')}
-                        onFocus={() => {
-                          if (modalBodyRef.current) lastScrollTopRef.current = modalBodyRef.current.scrollTop;
-                        }}
-                        onChange={(e) => {
-                          if (modalBodyRef.current) lastScrollTopRef.current = modalBodyRef.current.scrollTop;
-                          setVotosNulos(e.target.value.replace(/[^0-9]/g, ''));
-                          keepModalScroll();
-                        }}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setVotosNulos(e.target.value.replace(/[^0-9]/g, ''))}
                         className="w-full text-center text-xl font-bold border border-red-200 rounded-lg py-2 focus:border-red-600 focus:ring-1 focus:ring-red-600 focus:outline-none"
                         placeholder="0"
                       />
@@ -733,15 +713,11 @@ const Transcripcion = () => {
                       <input
                         type="text"
                         inputMode="numeric"
+                        enterKeyHint="done"
+                        autoComplete="off"
                         value={String(votosBlancos ?? '')}
-                        onFocus={() => {
-                          if (modalBodyRef.current) lastScrollTopRef.current = modalBodyRef.current.scrollTop;
-                        }}
-                        onChange={(e) => {
-                          if (modalBodyRef.current) lastScrollTopRef.current = modalBodyRef.current.scrollTop;
-                          setVotosBlancos(e.target.value.replace(/[^0-9]/g, ''));
-                          keepModalScroll();
-                        }}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setVotosBlancos(e.target.value.replace(/[^0-9]/g, ''))}
                         className="w-full text-center text-xl font-bold border border-gray-200 rounded-lg py-2 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:outline-none"
                         placeholder="0"
                       />
@@ -874,14 +850,8 @@ const Transcripcion = () => {
 
       <style>{`
         @keyframes slide-up {
-          from {
-            transform: translateY(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
         .animate-slide-up {
           animation: slide-up 0.3s ease-out;
