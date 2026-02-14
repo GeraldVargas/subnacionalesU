@@ -23,7 +23,8 @@ import {
     Hash,
     Award,
     Target,
-    Percent
+    Percent,
+    Download
 } from 'lucide-react';
 
 const HistorialActas = () => {
@@ -36,6 +37,7 @@ const HistorialActas = () => {
     const [mostrarEdicion, setMostrarEdicion] = useState(false);
     const [frentes, setFrentes] = useState([]);
     const [guardando, setGuardando] = useState(false);
+    const [errorImagen, setErrorImagen] = useState(false);
     
     // Estados para edición
     const [votosAlcalde, setVotosAlcalde] = useState([]);
@@ -44,7 +46,10 @@ const HistorialActas = () => {
     const [votosBlancos, setVotosBlancos] = useState(0);
     const [observaciones, setObservaciones] = useState('');
 
-    const API_URL = import.meta.env.VITE_API_URL;
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    // 🔥 IMPORTANTE: La URL base para archivos estáticos (sin /api)
+    const BASE_URL = API_URL.replace('/api', ''); // Elimina /api si existe
+
     const token = localStorage.getItem('token');
 
     const cargarActas = async () => {
@@ -67,6 +72,7 @@ const HistorialActas = () => {
 
     const cargarDetalleActa = async (id) => {
         try {
+            setErrorImagen(false);
             const response = await fetch(`${API_URL}/votos/acta/${id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -283,6 +289,11 @@ const HistorialActas = () => {
         );
     };
 
+    // Función para manejar error de imagen
+    const handleImageError = () => {
+        setErrorImagen(true);
+    };
+
     return (
         <div className="p-8 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
             {/* Header con diseño mejorado */}
@@ -325,7 +336,15 @@ const HistorialActas = () => {
                     <p className="text-4xl font-black text-[#F59E0B]">{estadisticas.registradas}</p>
                 </div>
 
-                
+                <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#10B981] hover:shadow-xl transition-all">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-[#10B981] bg-opacity-10 rounded-lg">
+                            <CheckCircle className="w-5 h-5 text-[#10B981]" />
+                        </div>
+                        <span className="text-gray-600 font-semibold">Validadas</span>
+                    </div>
+                    <p className="text-4xl font-black text-[#10B981]">{estadisticas.validadas}</p>
+                </div>
 
                 <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#1E3A8A] hover:shadow-xl transition-all">
                     <div className="flex items-center gap-3 mb-2">
@@ -355,7 +374,22 @@ const HistorialActas = () => {
                             />
                         </div>
                     </div>
-                    
+                    <div className="flex items-center gap-3">
+                        <div className="bg-[#1E3A8A] bg-opacity-10 p-2 rounded-lg">
+                            <Filter className="w-5 h-5 text-[#1E3A8A]" />
+                        </div>
+                        <select
+                            value={filtroEstado}
+                            onChange={(e) => setFiltroEstado(e.target.value)}
+                            className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none transition bg-white"
+                        >
+                            <option value="todos">Filtrar por estado</option>
+                            <option value="registrada">Registradas</option>
+                            <option value="validada">Validadas</option>
+                            <option value="rechazada">Rechazadas</option>
+                            <option value="pendiente">Pendientes</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -576,7 +610,7 @@ const HistorialActas = () => {
                                 </div>
                             </div>
 
-                            {/* Imagen del Acta */}
+                            {/* Imagen del Acta - CORREGIDA */}
                             {actaSeleccionada.acta.imagen_url && (
                                 <div className="mb-6">
                                     <h3 className="text-sm font-bold text-[#1E3A8A] mb-4 flex items-center gap-2">
@@ -584,12 +618,21 @@ const HistorialActas = () => {
                                         Imagen del Acta
                                     </h3>
                                     <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
-                                        <img
-                                            src={`${API_URL}${actaSeleccionada.acta.imagen_url}`}
-                                            alt="Acta escaneada"
-                                            className="w-full h-auto max-h-96 object-contain rounded-xl cursor-pointer hover:scale-105 transition-transform"
-                                            onClick={() => window.open(`${API_URL}${actaSeleccionada.acta.imagen_url}`, '_blank')}
-                                        />
+                                        {!errorImagen ? (
+                                            <img
+                                                src={`${BASE_URL}${actaSeleccionada.acta.imagen_url}`}
+                                                alt="Acta escaneada"
+                                                className="w-full h-auto max-h-96 object-contain rounded-xl cursor-pointer hover:scale-105 transition-transform"
+                                                onClick={() => window.open(`${BASE_URL}${actaSeleccionada.acta.imagen_url}`, '_blank')}
+                                                onError={handleImageError}
+                                            />
+                                        ) : (
+                                            <div className="text-center py-8">
+                                                <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+                                                <p className="text-red-600 font-medium">No se pudo cargar la imagen</p>
+                                                <p className="text-xs text-gray-500 mt-1">La imagen podría haber sido eliminada</p>
+                                            </div>
+                                        )}
                                         <p className="text-xs text-gray-500 text-center mt-2">Click para ver en tamaño completo</p>
                                     </div>
                                 </div>

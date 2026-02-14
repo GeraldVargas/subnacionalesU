@@ -44,10 +44,9 @@ const ResultadosEnVivo = () => {
             
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-const response = await fetch(`${API_URL}/votos/resultados-vivo`, {
-    headers
-});
-
+            const response = await fetch(`${API_URL}/votos/resultados-vivo`, {
+                headers
+            });
             
             const data = await response.json();
 
@@ -71,7 +70,7 @@ const response = await fetch(`${API_URL}/votos/resultados-vivo`, {
         
         let interval;
         if (autoRefresh) {
-            interval = setInterval(cargarResultados, 30000); // Actualizar cada 30 segundos
+            interval = setInterval(cargarResultados, 30000);
         }
         
         return () => {
@@ -79,18 +78,25 @@ const response = await fetch(`${API_URL}/votos/resultados-vivo`, {
         };
     }, [autoRefresh]);
 
+    // 🔥 FUNCIÓN DE PORCENTAJE CORREGIDA - Usa el total de votos (incluye nulos y blancos)
     const calcularPorcentaje = (votos, total) => {
-        if (total === 0) return 0;
+        if (!total || total === 0) return 0;
         return ((votos / total) * 100).toFixed(2);
     };
 
-    const totalVotosValidos = resultados.reduce((sum, r) => sum + (r.total_votos || 0), 0);
-    const maxVotos = Math.max(...resultados.map(r => r.total_votos || 0), 1);
+    // Total de votos (incluye nulos y blancos)
+    const totalVotos = parseInt(resumen.totalVotos) || 0;
     
-    const actasProcesadas = resumen.totalActas || 0;
+    // Total de votos de los frentes
+    const totalVotosValidos = resultados.reduce((sum, r) => sum + (parseInt(r.total_votos) || 0), 0);
+    
+    const maxVotos = Math.max(...resultados.map(r => parseInt(r.total_votos) || 0), 1);
+    
+    const actasProcesadas = parseInt(resumen.totalActas) || 0;
+    
     // Ordenar resultados por votos (mayor a menor)
     const resultadosOrdenados = [...resultados].sort((a, b) => 
-        (b.total_votos || 0) - (a.total_votos || 0)
+        (parseInt(b.total_votos) || 0) - (parseInt(a.total_votos) || 0)
     );
 
     return (
@@ -186,13 +192,25 @@ const response = await fetch(`${API_URL}/votos/resultados-vivo`, {
                             </div>
                             <span className="text-gray-600 font-semibold">Total Votos</span>
                         </div>
-                        <p className="text-4xl font-black text-[#F59E0B]">{resumen.totalVotos.toLocaleString()}</p>
+                        <p className="text-4xl font-black text-[#F59E0B]">{totalVotos.toLocaleString()}</p>
                         <p className="text-xs text-gray-500 mt-1">
                             Votos válidos: {totalVotosValidos.toLocaleString()}
                         </p>
                     </div>
 
-                    
+                    {/* 🔥 Tarjeta de Votos Válidos (nueva) */}
+                    <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#10B981] hover:shadow-xl transition-all">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-[#10B981] bg-opacity-10 rounded-lg">
+                                <CheckCircle className="w-5 h-5 text-[#10B981]" />
+                            </div>
+                            <span className="text-gray-600 font-semibold">Votos Válidos</span>
+                        </div>
+                        <p className="text-4xl font-black text-[#10B981]">{totalVotosValidos.toLocaleString()}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                            {totalVotos > 0 ? ((totalVotosValidos / totalVotos) * 100).toFixed(1) : 0}% del total
+                        </p>
+                    </div>
 
                     
                 </div>
@@ -255,9 +273,10 @@ const response = await fetch(`${API_URL}/votos/resultados-vivo`, {
                             <div className="bg-gray-50 rounded-2xl p-6 pt-14 border border-gray-200">
                                 <div className="flex items-end justify-center gap-6 overflow-x-auto pb-2 min-h-[300px]">
                                     {resultadosOrdenados.map((frente, index) => {
-                                        const votos = frente.total_votos || 0;
-                                        const porcentaje = calcularPorcentaje(votos, totalVotosValidos);
-                                        const barHeight = (votos / maxVotos) * 180; // Altura máxima 180px
+                                        const votos = parseInt(frente.total_votos) || 0;
+                                        // 🔥 PORCENTAJE CORREGIDO - Usa totalVotos (incluye nulos y blancos)
+                                        const porcentaje = calcularPorcentaje(votos, totalVotos);
+                                        const barHeight = maxVotos > 0 ? (votos / maxVotos) * 180 : 0;
                                         const esGanador = index === 0;
 
                                         return (
@@ -323,8 +342,9 @@ const response = await fetch(`${API_URL}/votos/resultados-vivo`, {
                             {/* Detalle por frente (Tarjetas) */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {resultadosOrdenados.map((frente, index) => {
-                                    const votos = frente.total_votos || 0;
-                                    const porcentaje = calcularPorcentaje(votos, totalVotosValidos);
+                                    const votos = parseInt(frente.total_votos) || 0;
+                                    // 🔥 PORCENTAJE CORREGIDO - Usa totalVotos (incluye nulos y blancos)
+                                    const porcentaje = calcularPorcentaje(votos, totalVotos);
                                     const esGanador = index === 0;
 
                                     return (
@@ -415,7 +435,7 @@ const response = await fetch(`${API_URL}/votos/resultados-vivo`, {
                                         {resumen.votosNulos?.toLocaleString() || 0}
                                     </p>
                                     <p className="text-sm text-red-600">
-                                        {calcularPorcentaje(resumen.votosNulos || 0, resumen.totalVotos || 1)}% del total
+                                        {calcularPorcentaje(resumen.votosNulos || 0, totalVotos)}% del total
                                     </p>
                                 </div>
                                 
@@ -433,10 +453,12 @@ const response = await fetch(`${API_URL}/votos/resultados-vivo`, {
                                         {resumen.votosBlancos?.toLocaleString() || 0}
                                     </p>
                                     <p className="text-sm text-[#F59E0B]">
-                                        {calcularPorcentaje(resumen.votosBlancos || 0, resumen.totalVotos || 1)}% del total
+                                        {calcularPorcentaje(resumen.votosBlancos || 0, totalVotos)}% del total
                                     </p>
                                 </div>
                             </div>
+                            
+                            
                         </div>
                     )}
                 </div>
