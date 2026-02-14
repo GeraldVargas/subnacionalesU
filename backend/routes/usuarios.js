@@ -266,28 +266,32 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/usuarios/:id - Eliminar usuario (soft delete)
+// DELETE /api/usuarios/:id - Eliminar usuario (BORRADO REAL)
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
+    // Verificar si existe
     const usuarioExiste = await pool.query(
       'SELECT id_usuario, nombre_usuario FROM usuario WHERE id_usuario = $1',
       [id]
     );
 
     if (usuarioExiste.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
     }
 
-    await pool.query(
-      'UPDATE usuario SET fecha_fin = CURRENT_TIMESTAMP WHERE id_usuario = $1',
-      [id]
-    );
+    // Borrado real
+    await pool.query('DELETE FROM usuario WHERE id_usuario = $1', [id]);
 
     res.json({
       success: true,
-      message: `Usuario "${usuarioExiste.rows[0].nombre_usuario}" desactivado exitosamente`
+      message: `Usuario "${usuarioExiste.rows[0].nombre_usuario}" eliminado definitivamente`
     });
+
   } catch (error) {
     console.error('Error al eliminar usuario:', error);
     res.status(500).json({
@@ -297,5 +301,6 @@ router.delete('/:id', async (req, res) => {
     });
   }
 });
+
 
 export default router;

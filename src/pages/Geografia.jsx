@@ -41,7 +41,8 @@ const Geografia = () => {
     const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
     // ========== CONSTANTES ==========
-    const TIPOS_POR_DEFECTO = ['País', 'Ciudad', 'Municipio', 'Localidad', 'Recinto'];
+    // ⚠️ IMPORTANTE: Vacío para que todo sea dinámico desde la BD
+    const TIPOS_POR_DEFECTO = [];
     
     const [nuevoRegistro, setNuevoRegistro] = useState({
         nombre: '',
@@ -69,7 +70,7 @@ const Geografia = () => {
         .includes('admin');
 
     // ========== TIPOS DINÁMICOS ==========
-    const [tiposDisponibles, setTiposDisponibles] = useState(TIPOS_POR_DEFECTO);
+    const [tiposDisponibles, setTiposDisponibles] = useState([]);
 
     // ========== EFFECTS ==========
     
@@ -85,10 +86,20 @@ const Geografia = () => {
 
     // Actualizar tipos disponibles cuando cambian registros o tipos custom
     useEffect(() => {
+        // 🔴 SOLO tipos que existen en la BD o son custom
         const tiposDesdeDB = [...new Set(registros.map(r => r.tipo).filter(Boolean))];
-        const todosLosTipos = [...new Set([...TIPOS_POR_DEFECTO, ...tiposDesdeDB, ...tiposCustom])];
+        const todosLosTipos = [...new Set([...tiposDesdeDB, ...tiposCustom])];
+        
+        // Ordenar alfabéticamente
+        todosLosTipos.sort((a, b) => a.localeCompare(b));
+        
         setTiposDisponibles(todosLosTipos);
-    }, [registros, tiposCustom]);
+        
+        // Si el filtro actual ya no existe, limpiarlo
+        if (filtroTipo && !todosLosTipos.includes(filtroTipo)) {
+            setFiltroTipo('');
+        }
+    }, [registros, tiposCustom, filtroTipo]);
 
     // Cargar datos iniciales
     useEffect(() => {
@@ -408,9 +419,10 @@ const Geografia = () => {
                 localStorage.setItem('tipos_geograficos_custom', JSON.stringify(nextCustom));
             }
 
-            // Recargar registros para actualizar tipos
+            // 🔴 IMPORTANTE: Recargar registros para actualizar tiposDesdeDB
             await cargarRegistros();
 
+            // Limpiar filtro si estaba seleccionado
             if (filtroTipo === tipoAEliminar) {
                 setFiltroTipo('');
             }
