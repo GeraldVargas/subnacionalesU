@@ -196,7 +196,7 @@ const Transcripcion = () => {
     const updateVotos = (tipo, idFrente, value) => {
         const setVotos = tipo === 'alcalde' ? setVotosAlcalde : setVotosConcejal;
         setVotos(prev => prev.map(v =>
-            v.id_frente === idFrente ? { ...v, cantidad: Math.max(0, value) } : v
+            v.id_frente === idFrente ? { ...v, cantidad: value } : v
         ));
     };
     
@@ -228,6 +228,15 @@ const Transcripcion = () => {
     };
 
     const handleRegistrarActa = async () => {
+        // Validar que haya votos registrados
+        const hayVotosAlcalde = votosAlcalde.some(v => v.cantidad > 0);
+        const hayVotosConcejal = votosConcejal.some(v => v.cantidad > 0);
+        
+        if (!hayVotosAlcalde && !hayVotosConcejal && votosNulos === 0 && votosBlancos === 0) {
+            mostrarNotificacion('error', 'Debe registrar al menos un voto');
+            return;
+        }
+
         setIsSaving(true);
 
         try {
@@ -239,8 +248,13 @@ const Transcripcion = () => {
             formData.append('votos_nulos', votosNulos);
             formData.append('votos_blancos', votosBlancos);
             formData.append('observaciones', observaciones);
-            formData.append('votos_alcalde', JSON.stringify(votosAlcalde.filter(v => v.cantidad > 0)));
-            formData.append('votos_concejal', JSON.stringify(votosConcejal.filter(v => v.cantidad > 0)));
+            
+            // Filtrar solo votos con cantidad > 0
+            const votosAlcaldeFiltrados = votosAlcalde.filter(v => v.cantidad > 0);
+            const votosConcejalFiltrados = votosConcejal.filter(v => v.cantidad > 0);
+            
+            formData.append('votos_alcalde', JSON.stringify(votosAlcaldeFiltrados));
+            formData.append('votos_concejal', JSON.stringify(votosConcejalFiltrados));
             
             if (imagenActa) {
                 formData.append('imagen_acta', imagenActa);
@@ -258,6 +272,11 @@ const Transcripcion = () => {
 
             if (data.success) {
                 mostrarNotificacion('success', '¡Acta registrada exitosamente!');
+                // Disparar evento para actualizar historial
+                window.dispatchEvent(new CustomEvent('acta-registrada', { 
+                    detail: { id_acta: data.data.id_acta }
+                }));
+                
                 setTimeout(() => {
                     setShowModal(false);
                     resetForm();
@@ -293,13 +312,13 @@ const Transcripcion = () => {
                 cantidad: 0
             }));
             setVotosAlcalde(votosIniciales);
-            setVotosConcejal(votosIniciales);
+            setVotosConcejal(JSON.parse(JSON.stringify(votosIniciales)));
         }
     };
 
-    const totalVotosAlcalde = votosAlcalde.reduce((sum, v) => sum + v.cantidad, 0);
-    const totalVotosConcejal = votosConcejal.reduce((sum, v) => sum + v.cantidad, 0);
-    const totalGeneral = totalVotosAlcalde + totalVotosConcejal + votosNulos + votosBlancos;
+    const totalVotosAlcalde = votosAlcalde.reduce((sum, v) => sum + (v.cantidad || 0), 0);
+    const totalVotosConcejal = votosConcejal.reduce((sum, v) => sum + (v.cantidad || 0), 0);
+    const totalGeneral = totalVotosAlcalde + totalVotosConcejal + (votosNulos || 0) + (votosBlancos || 0);
 
     const VotoCard = ({ frente, tipo }) => (
         <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all hover:border-[#F59E0B]">
@@ -320,7 +339,7 @@ const Transcripcion = () => {
                     value={frente.cantidad || ''}
                     onChange={(e) => {
                         const value = e.target.value.replace(/[^0-9]/g, '');
-                        updateVotos(tipo, frente.id_frente, parseInt(value) || 0);
+                        updateVotos(tipo, frente.id_frente, value === '' ? 0 : parseInt(value));
                     }}
                     className="w-20 text-center text-xl font-bold border border-gray-300 rounded-lg py-2 focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A] focus:outline-none"
                     placeholder="0"
@@ -580,7 +599,7 @@ const Transcripcion = () => {
                                                     <div>
                                                         <p className="font-semibold text-gray-900 group-hover:text-[#10B981]">Mesa {mesa.numero_mesa}</p>
                                                         <p className="text-xs text-gray-500 mt-1">{mesa.codigo}</p>
-                                                        {mesa.actas_registradas > 0 && (
+                                                        {parseInt(mesa.actas_registradas) > 0 && (
                                                             <p className="text-xs text-[#F59E0B] mt-2 font-medium">
                                                                 ⚠️ {mesa.actas_registradas} acta(s) registrada(s)
                                                             </p>
@@ -666,7 +685,7 @@ const Transcripcion = () => {
                                                 value={votosNulos || ''}
                                                 onChange={(e) => {
                                                     const value = e.target.value.replace(/[^0-9]/g, '');
-                                                    setVotosNulos(parseInt(value) || 0);
+                                                    setVotosNulos(value === '' ? 0 : parseInt(value));
                                                 }}
                                                 className="w-full text-center text-xl font-bold border border-red-200 rounded-lg py-2 focus:border-red-600 focus:ring-1 focus:ring-red-600 focus:outline-none"
                                                 placeholder="0"
@@ -683,7 +702,7 @@ const Transcripcion = () => {
                                                 value={votosBlancos || ''}
                                                 onChange={(e) => {
                                                     const value = e.target.value.replace(/[^0-9]/g, '');
-                                                    setVotosBlancos(parseInt(value) || 0);
+                                                    setVotosBlancos(value === '' ? 0 : parseInt(value));
                                                 }}
                                                 className="w-full text-center text-xl font-bold border border-gray-200 rounded-lg py-2 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:outline-none"
                                                 placeholder="0"
@@ -765,9 +784,9 @@ const Transcripcion = () => {
 
                                     <button
                                         onClick={handleRegistrarActa}
-                                        disabled={isSaving || totalGeneral === 0}
+                                        disabled={isSaving}
                                         className={`w-full py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 transition ${
-                                            isSaving || totalGeneral === 0
+                                            isSaving
                                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                                 : 'bg-[#F59E0B] hover:bg-[#e68906] text-white shadow-lg hover:shadow-xl'
                                         }`}

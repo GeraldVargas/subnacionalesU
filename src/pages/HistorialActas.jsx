@@ -39,11 +39,14 @@ const HistorialActas = () => {
     const [observaciones, setObservaciones] = useState('');
 
     const API_URL = import.meta.env.VITE_API_URL;
+    const token = localStorage.getItem('token');
 
     const cargarActas = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/votos`);
+            const response = await fetch(`${API_URL}/votos`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const data = await response.json();
             
             if (data.success) {
@@ -58,7 +61,9 @@ const HistorialActas = () => {
 
     const cargarDetalleActa = async (id) => {
         try {
-            const response = await fetch(`${API_URL}/votos/acta/${id}`);
+            const response = await fetch(`${API_URL}/votos/acta/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const data = await response.json();
             
             if (data.success) {
@@ -72,7 +77,9 @@ const HistorialActas = () => {
 
     const cargarFrentes = async () => {
         try {
-            const response = await fetch(`${API_URL}/votos/frentes`);
+            const response = await fetch(`${API_URL}/votos/frentes`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const data = await response.json();
             if (data.success) {
                 setFrentes(data.data);
@@ -85,7 +92,9 @@ const HistorialActas = () => {
     const iniciarEdicion = async (id) => {
         try {
             // Cargar detalle del acta
-            const response = await fetch(`${API_URL}/votos/acta/${id}`);
+            const response = await fetch(`${API_URL}/votos/acta/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const data = await response.json();
             
             if (data.success) {
@@ -97,18 +106,32 @@ const HistorialActas = () => {
                 }
                 
                 // Inicializar votos para edición
-                const votosAlcaldeActa = data.data.votos
-                    .filter(v => v.tipo_cargo === 'alcalde')
-                    .map(v => ({ id_frente: v.id_frente, cantidad: v.cantidad }));
+                const votosAlcaldeMap = new Map();
+                const votosConcejalesMap = new Map();
                 
-                const votosConcejalesActa = data.data.votos
-                    .filter(v => v.tipo_cargo === 'concejal')
-                    .map(v => ({ id_frente: v.id_frente, cantidad: v.cantidad }));
+                data.data.votos.forEach(voto => {
+                    if (voto.tipo_cargo === 'alcalde') {
+                        votosAlcaldeMap.set(voto.id_frente, voto.cantidad);
+                    } else if (voto.tipo_cargo === 'concejal') {
+                        votosConcejalesMap.set(voto.id_frente, voto.cantidad);
+                    }
+                });
                 
-                setVotosAlcalde(votosAlcaldeActa);
-                setVotosConcejal(votosConcejalesActa);
-                setVotosNulos(data.data.acta.votos_nulos || 0);
-                setVotosBlancos(data.data.acta.votos_blancos || 0);
+                // Convertir a arrays con todos los frentes
+                const votosAlcaldeArray = frentes.map(f => ({
+                    id_frente: f.id_frente,
+                    cantidad: votosAlcaldeMap.get(f.id_frente) || 0
+                }));
+                
+                const votosConcejalArray = frentes.map(f => ({
+                    id_frente: f.id_frente,
+                    cantidad: votosConcejalesMap.get(f.id_frente) || 0
+                }));
+                
+                setVotosAlcalde(votosAlcaldeArray);
+                setVotosConcejal(votosConcejalArray);
+                setVotosNulos(parseInt(data.data.acta.votos_nulos) || 0);
+                setVotosBlancos(parseInt(data.data.acta.votos_blancos) || 0);
                 setObservaciones(data.data.acta.observaciones || '');
                 
                 setMostrarEdicion(true);
@@ -130,6 +153,15 @@ const HistorialActas = () => {
                 return;
             }
 
+            // Filtrar solo votos con cantidad > 0
+            const votosAlcaldeFiltrados = votosAlcalde
+                .filter(v => v.cantidad > 0)
+                .map(v => ({ id_frente: v.id_frente, cantidad: v.cantidad }));
+                
+            const votosConcejalFiltrados = votosConcejal
+                .filter(v => v.cantidad > 0)
+                .map(v => ({ id_frente: v.id_frente, cantidad: v.cantidad }));
+
             const response = await fetch(`${API_URL}/votos/acta/${actaSeleccionada.acta.id_acta}`, {
                 method: 'PUT',
                 headers: {
@@ -140,8 +172,8 @@ const HistorialActas = () => {
                     votos_nulos: parseInt(votosNulos) || 0,
                     votos_blancos: parseInt(votosBlancos) || 0,
                     observaciones,
-                    votos_alcalde: votosAlcalde.filter(v => v.cantidad > 0),
-                    votos_concejal: votosConcejal.filter(v => v.cantidad > 0)
+                    votos_alcalde: votosAlcaldeFiltrados,
+                    votos_concejal: votosConcejalFiltrados
                 })
             });
 
@@ -152,7 +184,7 @@ const HistorialActas = () => {
                 setMostrarEdicion(false);
                 cargarActas(); // Recargar lista
             } else {
-                alert('Error: ' + data.message);
+                alert('Error: ' + (data.message || 'Error al guardar los cambios'));
             }
         } catch (error) {
             console.error('Error al guardar edición:', error);
@@ -162,18 +194,27 @@ const HistorialActas = () => {
         }
     };
 
+    // Escuchar evento de nueva acta registrada
+    useEffect(() => {
+        const handleActaRegistrada = () => {
+            cargarActas();
+        };
+        
+        window.addEventListener('acta-registrada', handleActaRegistrada);
+        
+        return () => {
+            window.removeEventListener('acta-registrada', handleActaRegistrada);
+        };
+    }, []);
+
     const actualizarVoto = (tipo, idFrente, cantidad) => {
         const setter = tipo === 'alcalde' ? setVotosAlcalde : setVotosConcejal;
         const votos = tipo === 'alcalde' ? votosAlcalde : votosConcejal;
         
-        const index = votos.findIndex(v => v.id_frente === idFrente);
-        if (index >= 0) {
-            const nuevosVotos = [...votos];
-            nuevosVotos[index] = { id_frente: idFrente, cantidad: Math.max(0, cantidad) };
-            setter(nuevosVotos);
-        } else {
-            setter([...votos, { id_frente: idFrente, cantidad: Math.max(0, cantidad) }]);
-        }
+        const nuevosVotos = votos.map(v => 
+            v.id_frente === idFrente ? { ...v, cantidad } : v
+        );
+        setter(nuevosVotos);
     };
 
     const getVotosPorFrente = (tipo, idFrente) => {
@@ -189,9 +230,9 @@ const HistorialActas = () => {
 
     const actasFiltradas = actas.filter(acta => {
         const coincideBusqueda = 
-            acta.codigo_mesa?.toLowerCase().includes(busqueda.toLowerCase()) ||
-            acta.nombre_recinto?.toLowerCase().includes(busqueda.toLowerCase()) ||
-            acta.nombre_geografico?.toLowerCase().includes(busqueda.toLowerCase());
+            (acta.codigo_mesa || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+            (acta.nombre_recinto || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+            (acta.nombre_geografico || '').toLowerCase().includes(busqueda.toLowerCase());
         
         const coincideEstado = 
             filtroEstado === 'todos' || 
@@ -270,7 +311,7 @@ const HistorialActas = () => {
                         <span className="text-gray-600 font-semibold">Votos Totales</span>
                     </div>
                     <p className="text-4xl font-black text-purple-600">
-                        {actas.reduce((sum, a) => sum + (a.votos_totales || 0), 0).toLocaleString()}
+                        {actas.reduce((sum, a) => sum + (parseInt(a.votos_totales) || 0), 0).toLocaleString()}
                     </p>
                 </div>
             </div>
@@ -366,13 +407,13 @@ const HistorialActas = () => {
                                                 <div className="flex items-center gap-2">
                                                     <Calendar className="w-4 h-4 text-gray-400" />
                                                     <span className="text-sm text-gray-600">
-                                                        {new Date(acta.fecha_registro).toLocaleDateString('es-BO', {
+                                                        {acta.fecha_registro ? new Date(acta.fecha_registro).toLocaleDateString('es-BO', {
                                                             day: '2-digit',
                                                             month: '2-digit',
                                                             year: 'numeric',
                                                             hour: '2-digit',
                                                             minute: '2-digit'
-                                                        })}
+                                                        }) : 'N/A'}
                                                     </span>
                                                 </div>
                                                 {acta.editada && acta.fecha_ultima_edicion && (
@@ -441,7 +482,7 @@ const HistorialActas = () => {
                                     onClick={() => setMostrarDetalle(false)}
                                     className="p-2 hover:bg-gray-100 rounded-xl transition"
                                 >
-                                    ×
+                                    X
                                 </button>
                             </div>
                         </div>
@@ -529,29 +570,33 @@ const HistorialActas = () => {
                             <div>
                                 <h3 className="text-lg font-bold text-gray-900 mb-4">Votos por Frente Político</h3>
                                 <div className="space-y-4">
-                                    {actaSeleccionada.votos.map((voto) => (
-                                        <div key={voto.id_voto} className="bg-white border-2 border-gray-200 rounded-xl p-4">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div
-                                                        className="w-12 h-12 rounded-xl"
-                                                        style={{ backgroundColor: voto.color || '#E31E24' }}
-                                                    />
-                                                    <div>
-                                                        <p className="font-bold text-gray-900">{voto.siglas}</p>
-                                                        <p className="text-sm text-gray-600">{voto.nombre_frente}</p>
-                                                        <p className="text-xs text-gray-500 mt-1">
-                                                            Cargo: <span className="font-semibold">{voto.tipo_cargo}</span>
-                                                        </p>
+                                    {actaSeleccionada.votos && actaSeleccionada.votos.length > 0 ? (
+                                        actaSeleccionada.votos.map((voto) => (
+                                            <div key={voto.id_voto} className="bg-white border-2 border-gray-200 rounded-xl p-4">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div
+                                                            className="w-12 h-12 rounded-xl"
+                                                            style={{ backgroundColor: voto.color || '#E31E24' }}
+                                                        />
+                                                        <div>
+                                                            <p className="font-bold text-gray-900">{voto.siglas}</p>
+                                                            <p className="text-sm text-gray-600">{voto.nombre_frente}</p>
+                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                Cargo: <span className="font-semibold">{voto.tipo_cargo}</span>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-3xl font-black text-gray-900">{voto.cantidad}</p>
+                                                        <p className="text-sm text-gray-600">votos</p>
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <p className="text-3xl font-black text-gray-900">{voto.cantidad}</p>
-                                                    <p className="text-sm text-gray-600">votos</p>
-                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))
+                                    ) : (
+                                        <p className="text-center text-gray-500 py-4">No hay votos registrados</p>
+                                    )}
                                 </div>
                             </div>
 
@@ -616,7 +661,7 @@ const HistorialActas = () => {
                                                     value={getVotosPorFrente('alcalde', frente.id_frente) || ''}
                                                     onChange={(e) => {
                                                         const value = e.target.value.replace(/[^0-9]/g, '');
-                                                        actualizarVoto('alcalde', frente.id_frente, parseInt(value) || 0);
+                                                        actualizarVoto('alcalde', frente.id_frente, value === '' ? 0 : parseInt(value));
                                                     }}
                                                     className="w-24 text-center text-2xl font-bold border-2 border-gray-300 rounded-xl py-3 focus:border-indigo-600 focus:outline-none"
                                                     placeholder="0"
@@ -653,7 +698,7 @@ const HistorialActas = () => {
                                                     value={getVotosPorFrente('concejal', frente.id_frente) || ''}
                                                     onChange={(e) => {
                                                         const value = e.target.value.replace(/[^0-9]/g, '');
-                                                        actualizarVoto('concejal', frente.id_frente, parseInt(value) || 0);
+                                                        actualizarVoto('concejal', frente.id_frente, value === '' ? 0 : parseInt(value));
                                                     }}
                                                     className="w-24 text-center text-2xl font-bold border-2 border-gray-300 rounded-xl py-3 focus:border-purple-600 focus:outline-none"
                                                     placeholder="0"
@@ -676,7 +721,7 @@ const HistorialActas = () => {
                                         value={votosNulos || ''}
                                         onChange={(e) => {
                                             const value = e.target.value.replace(/[^0-9]/g, '');
-                                            setVotosNulos(parseInt(value) || 0);
+                                            setVotosNulos(value === '' ? 0 : parseInt(value));
                                         }}
                                         className="w-full text-center text-3xl font-bold border-2 border-gray-300 rounded-xl py-3 focus:border-red-600 focus:outline-none"
                                         placeholder="0"
@@ -692,7 +737,7 @@ const HistorialActas = () => {
                                         value={votosBlancos || ''}
                                         onChange={(e) => {
                                             const value = e.target.value.replace(/[^0-9]/g, '');
-                                            setVotosBlancos(parseInt(value) || 0);
+                                            setVotosBlancos(value === '' ? 0 : parseInt(value));
                                         }}
                                         className="w-full text-center text-3xl font-bold border-2 border-gray-300 rounded-xl py-3 focus:border-gray-600 focus:outline-none"
                                         placeholder="0"

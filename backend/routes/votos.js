@@ -4,6 +4,7 @@ import { verificarToken } from '../middleware/auth.js';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const router = express.Router();
 
@@ -11,10 +12,16 @@ const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Asegurar que el directorio de uploads existe
+const uploadDir = path.join(__dirname, '../uploads/actas');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 // Configuración de multer para imágenes de actas
 const storageActas = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, '../uploads/actas'));
+        cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -37,7 +44,7 @@ const uploadActa = multer({
 });
 
 // GET /api/votos - Obtener todos los registros de votos
-router.get('/', async (req, res) => {
+router.get('/', verificarToken, async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT 
@@ -81,7 +88,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/votos/recintos - Obtener recintos por geografico
-router.get('/recintos', async (req, res) => {
+router.get('/recintos', verificarToken, async (req, res) => {
     const { id_geografico } = req.query;
 
     try {
@@ -92,7 +99,7 @@ router.get('/recintos', async (req, res) => {
                 r.direccion,
                 r.id_geografico,
                 g.nombre as nombre_geografico,
-                COUNT(m.id_mesa) as cantidad_mesas
+                COUNT(DISTINCT m.id_mesa) as cantidad_mesas
             FROM recinto r
             LEFT JOIN geografico g ON r.id_geografico = g.id_geografico
             LEFT JOIN mesa m ON r.id_recinto = m.id_recinto
@@ -124,7 +131,7 @@ router.get('/recintos', async (req, res) => {
 });
 
 // POST /api/votos/recintos - Crear nuevo recinto
-router.post('/recintos', async (req, res) => {
+router.post('/recintos', verificarToken, async (req, res) => {
     const { nombre, direccion, id_geografico } = req.body;
 
     try {
@@ -158,7 +165,7 @@ router.post('/recintos', async (req, res) => {
 });
 
 // PUT /api/votos/recintos/:id - Actualizar recinto
-router.put('/recintos/:id', async (req, res) => {
+router.put('/recintos/:id', verificarToken, async (req, res) => {
     const { id } = req.params;
     const { nombre, direccion, id_geografico } = req.body;
 
@@ -194,10 +201,23 @@ router.put('/recintos/:id', async (req, res) => {
 });
 
 // DELETE /api/votos/recintos/:id - Eliminar recinto
-router.delete('/recintos/:id', async (req, res) => {
+router.delete('/recintos/:id', verificarToken, async (req, res) => {
     const { id } = req.params;
 
     try {
+        // Verificar si tiene mesas asociadas
+        const mesas = await pool.query(
+            'SELECT COUNT(*) as total FROM mesa WHERE id_recinto = $1',
+            [id]
+        );
+
+        if (parseInt(mesas.rows[0].total) > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se puede eliminar el recinto porque tiene mesas asociadas'
+            });
+        }
+
         const result = await pool.query(
             'DELETE FROM recinto WHERE id_recinto = $1 RETURNING *',
             [id]
@@ -226,7 +246,7 @@ router.delete('/recintos/:id', async (req, res) => {
 });
 
 // GET /api/votos/mesas - Obtener mesas por recinto
-router.get('/mesas', async (req, res) => {
+router.get('/mesas', verificarToken, async (req, res) => {
     const { id_recinto } = req.query;
 
     try {
@@ -238,7 +258,7 @@ router.get('/mesas', async (req, res) => {
                 m.numero_mesa,
                 m.id_recinto,
                 r.nombre as nombre_recinto,
-                COUNT(a.id_acta) as actas_registradas
+                COUNT(DISTINCT a.id_acta) as actas_registradas
             FROM mesa m
             LEFT JOIN recinto r ON m.id_recinto = r.id_recinto
             LEFT JOIN acta a ON m.id_mesa = a.id_mesa
@@ -270,7 +290,7 @@ router.get('/mesas', async (req, res) => {
 });
 
 // POST /api/votos/mesas - Crear nueva mesa
-router.post('/mesas', async (req, res) => {
+router.post('/mesas', verificarToken, async (req, res) => {
     const { codigo, descripcion, numero_mesa, id_recinto } = req.body;
 
     try {
@@ -317,7 +337,7 @@ router.post('/mesas', async (req, res) => {
 });
 
 // PUT /api/votos/mesas/:id - Actualizar mesa
-router.put('/mesas/:id', async (req, res) => {
+router.put('/mesas/:id', verificarToken, async (req, res) => {
     const { id } = req.params;
     const { codigo, descripcion, numero_mesa, id_recinto } = req.body;
 
@@ -353,7 +373,7 @@ router.put('/mesas/:id', async (req, res) => {
 });
 
 // DELETE /api/votos/mesas/:id - Eliminar mesa
-router.delete('/mesas/:id', async (req, res) => {
+router.delete('/mesas/:id', verificarToken, async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -398,7 +418,7 @@ router.delete('/mesas/:id', async (req, res) => {
 });
 
 // GET /api/votos/frentes - Obtener todos los frentes políticos
-router.get('/frentes', async (req, res) => {
+router.get('/frentes', verificarToken, async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT 
@@ -440,14 +460,33 @@ router.post('/registrar-acta', verificarToken, uploadActa.single('imagen_acta'),
     
     // Parsear JSON strings si vienen de FormData
     if (typeof votos_alcalde === 'string') {
-        votos_alcalde = JSON.parse(votos_alcalde);
+        try {
+            votos_alcalde = JSON.parse(votos_alcalde);
+        } catch (e) {
+            votos_alcalde = [];
+        }
     }
     if (typeof votos_concejal === 'string') {
-        votos_concejal = JSON.parse(votos_concejal);
+        try {
+            votos_concejal = JSON.parse(votos_concejal);
+        } catch (e) {
+            votos_concejal = [];
+        }
     }
 
+    // Asegurar que sean arrays
+    votos_alcalde = Array.isArray(votos_alcalde) ? votos_alcalde : [];
+    votos_concejal = Array.isArray(votos_concejal) ? votos_concejal : [];
+
     // Obtener id_usuario del token JWT decodificado
-    const id_usuario = req.usuario.id_usuario;
+    const id_usuario = req.usuario?.id_usuario;
+    
+    if (!id_usuario) {
+        return res.status(401).json({
+            success: false,
+            message: 'Usuario no autenticado'
+        });
+    }
     
     // Obtener URL de la imagen si fue subida
     const imagen_url = req.file ? `/uploads/actas/${req.file.filename}` : null;
@@ -462,11 +501,21 @@ router.post('/registrar-acta', verificarToken, uploadActa.single('imagen_acta'),
             throw new Error('El ID de mesa es requerido');
         }
 
+        // Verificar que la mesa existe
+        const mesaExists = await client.query(
+            'SELECT id_mesa FROM mesa WHERE id_mesa = $1',
+            [id_mesa]
+        );
+        
+        if (mesaExists.rows.length === 0) {
+            throw new Error('La mesa seleccionada no existe');
+        }
+
         // Calcular totales
-        const votosValidosAlcalde = votos_alcalde?.reduce((sum, v) => sum + (v.cantidad || 0), 0) || 0;
-        const votosValidosConcejal = votos_concejal?.reduce((sum, v) => sum + (v.cantidad || 0), 0) || 0;
+        const votosValidosAlcalde = votos_alcalde?.reduce((sum, v) => sum + (parseInt(v.cantidad) || 0), 0) || 0;
+        const votosValidosConcejal = votos_concejal?.reduce((sum, v) => sum + (parseInt(v.cantidad) || 0), 0) || 0;
         const votosValidos = votosValidosAlcalde + votosValidosConcejal;
-        const votosTotales = votosValidos + (votos_nulos || 0) + (votos_blancos || 0);
+        const votosTotales = votosValidos + (parseInt(votos_nulos) || 0) + (parseInt(votos_blancos) || 0);
 
         // Insertar acta
         const actaResult = await client.query(`
@@ -490,8 +539,8 @@ router.post('/registrar-acta', verificarToken, uploadActa.single('imagen_acta'),
             id_usuario,
             votosTotales,
             votosValidos,
-            votos_nulos || 0,
-            votos_blancos || 0,
+            parseInt(votos_nulos) || 0,
+            parseInt(votos_blancos) || 0,
             observaciones || null,
             'registrada',
             imagen_url
@@ -502,11 +551,12 @@ router.post('/registrar-acta', verificarToken, uploadActa.single('imagen_acta'),
         // Insertar votos de alcalde
         if (votos_alcalde && votos_alcalde.length > 0) {
             for (const voto of votos_alcalde) {
-                if (voto.cantidad > 0) {
+                const cantidad = parseInt(voto.cantidad) || 0;
+                if (cantidad > 0) {
                     await client.query(`
                         INSERT INTO voto (id_acta, id_frente, cantidad, tipo_cargo)
                         VALUES ($1, $2, $3, $4)
-                    `, [id_acta, voto.id_frente, voto.cantidad, 'alcalde']);
+                    `, [id_acta, voto.id_frente, cantidad, 'alcalde']);
                 }
             }
         }
@@ -514,11 +564,12 @@ router.post('/registrar-acta', verificarToken, uploadActa.single('imagen_acta'),
         // Insertar votos de concejal
         if (votos_concejal && votos_concejal.length > 0) {
             for (const voto of votos_concejal) {
-                if (voto.cantidad > 0) {
+                const cantidad = parseInt(voto.cantidad) || 0;
+                if (cantidad > 0) {
                     await client.query(`
                         INSERT INTO voto (id_acta, id_frente, cantidad, tipo_cargo)
                         VALUES ($1, $2, $3, $4)
-                    `, [id_acta, voto.id_frente, voto.cantidad, 'concejal']);
+                    `, [id_acta, voto.id_frente, cantidad, 'concejal']);
                 }
             }
         }
@@ -540,7 +591,7 @@ router.post('/registrar-acta', verificarToken, uploadActa.single('imagen_acta'),
         console.error('Error al registrar acta:', error);
         res.status(500).json({
             success: false,
-            message: 'Error al registrar acta',
+            message: 'Error al registrar acta: ' + error.message,
             error: error.message
         });
     } finally {
@@ -576,10 +627,10 @@ router.put('/acta/:id', verificarToken, async (req, res) => {
         }
 
         // Calcular totales
-        const votosValidosAlcalde = votos_alcalde?.reduce((sum, v) => sum + (v.cantidad || 0), 0) || 0;
-        const votosValidosConcejal = votos_concejal?.reduce((sum, v) => sum + (v.cantidad || 0), 0) || 0;
+        const votosValidosAlcalde = (votos_alcalde || []).reduce((sum, v) => sum + (parseInt(v.cantidad) || 0), 0) || 0;
+        const votosValidosConcejal = (votos_concejal || []).reduce((sum, v) => sum + (parseInt(v.cantidad) || 0), 0) || 0;
         const votosValidos = votosValidosAlcalde + votosValidosConcejal;
-        const votosTotales = votosValidos + (votos_nulos || 0) + (votos_blancos || 0);
+        const votosTotales = votosValidos + (parseInt(votos_nulos) || 0) + (parseInt(votos_blancos) || 0);
 
         // Actualizar el acta existente
         await client.query(`
@@ -596,8 +647,8 @@ router.put('/acta/:id', verificarToken, async (req, res) => {
         `, [
             votosTotales,
             votosValidos,
-            votos_nulos || 0,
-            votos_blancos || 0,
+            parseInt(votos_nulos) || 0,
+            parseInt(votos_blancos) || 0,
             observaciones || null,
             estado,
             id
@@ -609,11 +660,12 @@ router.put('/acta/:id', verificarToken, async (req, res) => {
         // Insertar nuevos votos de alcalde
         if (votos_alcalde && votos_alcalde.length > 0) {
             for (const voto of votos_alcalde) {
-                if (voto.cantidad > 0) {
+                const cantidad = parseInt(voto.cantidad) || 0;
+                if (cantidad > 0) {
                     await client.query(`
                         INSERT INTO voto (id_acta, id_frente, cantidad, tipo_cargo)
                         VALUES ($1, $2, $3, $4)
-                    `, [id, voto.id_frente, voto.cantidad, 'alcalde']);
+                    `, [id, voto.id_frente, cantidad, 'alcalde']);
                 }
             }
         }
@@ -621,11 +673,12 @@ router.put('/acta/:id', verificarToken, async (req, res) => {
         // Insertar nuevos votos de concejal
         if (votos_concejal && votos_concejal.length > 0) {
             for (const voto of votos_concejal) {
-                if (voto.cantidad > 0) {
+                const cantidad = parseInt(voto.cantidad) || 0;
+                if (cantidad > 0) {
                     await client.query(`
                         INSERT INTO voto (id_acta, id_frente, cantidad, tipo_cargo)
                         VALUES ($1, $2, $3, $4)
-                    `, [id, voto.id_frente, voto.cantidad, 'concejal']);
+                    `, [id, voto.id_frente, cantidad, 'concejal']);
                 }
             }
         }
@@ -648,7 +701,7 @@ router.put('/acta/:id', verificarToken, async (req, res) => {
         console.error('Error al editar acta:', error);
         res.status(500).json({
             success: false,
-            message: 'Error al editar acta',
+            message: 'Error al editar acta: ' + error.message,
             error: error.message
         });
     } finally {
@@ -657,7 +710,7 @@ router.put('/acta/:id', verificarToken, async (req, res) => {
 });
 
 // GET /api/votos/acta/:id - Obtener detalle de un acta
-router.get('/acta/:id', async (req, res) => {
+router.get('/acta/:id', verificarToken, async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -722,7 +775,7 @@ router.get('/acta/:id', async (req, res) => {
 });
 
 // GET /api/votos/resultados-vivo - Obtener resultados en tiempo real
-router.get('/resultados-vivo', async (req, res) => {
+router.get('/resultados-vivo', verificarToken, async (req, res) => {
     try {
         // Obtener votos agregados por frente político
         const resultadosQuery = await pool.query(`
@@ -731,14 +784,13 @@ router.get('/resultados-vivo', async (req, res) => {
                 f.nombre,
                 f.siglas,
                 f.color,
-                SUM(v.cantidad) as total_votos,
-                SUM(CASE WHEN v.tipo_cargo = 'alcalde' THEN v.cantidad ELSE 0 END) as votos_alcalde,
-                SUM(CASE WHEN v.tipo_cargo = 'concejal' THEN v.cantidad ELSE 0 END) as votos_concejal,
+                COALESCE(SUM(v.cantidad), 0) as total_votos,
+                COALESCE(SUM(CASE WHEN v.tipo_cargo = 'alcalde' THEN v.cantidad ELSE 0 END), 0) as votos_alcalde,
+                COALESCE(SUM(CASE WHEN v.tipo_cargo = 'concejal' THEN v.cantidad ELSE 0 END), 0) as votos_concejal,
                 COUNT(DISTINCT v.id_acta) as actas_con_votos
             FROM frente_politico f
             LEFT JOIN voto v ON f.id_frente = v.id_frente
             GROUP BY f.id_frente, f.nombre, f.siglas, f.color
-            HAVING SUM(v.cantidad) > 0
             ORDER BY total_votos DESC
         `);
 
@@ -746,9 +798,9 @@ router.get('/resultados-vivo', async (req, res) => {
         const resumenQuery = await pool.query(`
             SELECT 
                 COUNT(*) as total_actas,
-                SUM(votos_totales) as total_votos,
-                SUM(votos_nulos) as votos_nulos,
-                SUM(votos_blancos) as votos_blancos,
+                COALESCE(SUM(votos_totales), 0) as total_votos,
+                COALESCE(SUM(votos_nulos), 0) as votos_nulos,
+                COALESCE(SUM(votos_blancos), 0) as votos_blancos,
                 COUNT(CASE WHEN estado = 'validada' THEN 1 END) as actas_validadas
             FROM acta
         `);
