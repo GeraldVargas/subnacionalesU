@@ -6,10 +6,10 @@
 @tailwind utilities;
 
 :root {
-  --primary-red: #ff0008;
+  --primary-red: #091772;
   --primary-gold: #ffa307;
   --primary-white: #fefefe;
-  --red-dark: #cc0006;
+  --red-dark: #281071;
   --gold-dark: #cc8206;
   --gray-900: #212121;
 }
