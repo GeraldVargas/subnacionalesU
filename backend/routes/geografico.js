@@ -1,327 +1,327 @@
+// backend/routes/geografico.js
 import express from 'express';
 import pool from '../database.js';
 
 const router = express.Router();
-// Middleware de autenticación
+
+/**
+ * Middleware de autenticación
+ * (mismo patrón que estás usando en frentes.js)
+ */
 const verificarToken = (req, res, next) => {
-    const token = req.headers.authorization?.split(' ')[1];
+  const token = req.headers.authorization?.split(' ')[1];
 
-    if (!token) {
-        return res.status(401).json({ 
-            success: false,
-            message: 'Token no proporcionado' 
-        });
-    }
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Token no proporcionado' });
+  }
 
-    // Aquí podrías validar JWT si quieres
-    next();
+  // Aquí deberías verificar el JWT realmente.
+  // Por ahora, seguimos como en tu proyecto.
+  next();
 };
 
-// GET /api/geografico - Obtener todos los registros geográficos
-router.get('/', async (req, res) => {
-    try {
-        const result = await pool.query(`
-      SELECT 
-        g.id_geografico,
-        g.nombre,
-        g.codigo,
-        g.ubicacion,
-        g.tipo,
-        g.fk_id_geografico,
-        padre.nombre as nombre_padre
-      FROM geografico g
-      LEFT JOIN geografico padre ON g.fk_id_geografico = padre.id_geografico
-      ORDER BY g.tipo, g.nombre
-    `);
+/**
+ * ==========================
+ * ✅ RUTAS DE TIPOS (IMPORTANTE: VAN ANTES DE "/:id")
+ * ==========================
+ */
 
-        res.json({
-            success: true,
-            data: result.rows
-        });
-
-    } catch (error) {
-        console.error('Error al obtener registros geográficos:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener registros geográficos',
-            error: error.message
-        });
-    }
-});
-
-// GET /api/geografico/tipos - Obtener tipos únicos
-router.get('/tipos', async (req, res) => {
-    try {
-        const result = await pool.query(`
+// GET - Listar tipos únicos existentes
+router.get('/tipos', verificarToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
       SELECT DISTINCT tipo
       FROM geografico
-      WHERE tipo IS NOT NULL
+      WHERE tipo IS NOT NULL AND tipo <> ''
       ORDER BY tipo
     `);
 
-        res.json({
-            success: true,
-            data: result.rows.map(r => r.tipo)
-        });
-
-    } catch (error) {
-        console.error('Error al obtener tipos:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener tipos',
-            error: error.message
-        });
-    }
+    res.json({ success: true, data: result.rows.map(r => r.tipo) });
+  } catch (error) {
+    console.error('Error al obtener tipos:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener tipos' });
+  }
 });
 
-// GET /api/geografico/padres - Obtener posibles padres (para jerarquía)
-router.get('/padres', async (req, res) => {
-    try {
-        const result = await pool.query(`
-      SELECT id_geografico, nombre, tipo
-      FROM geografico
-      ORDER BY tipo, nombre
-    `);
+// POST - Crear tipo (no inserta registro, solo valida/normaliza para UI)
+// Nota: Como "tipo" vive en registros, esta ruta solo sirve para que el frontend
+// mantenga una lista (si tú decides guardarlo en otra tabla en el futuro).
+router.post('/tipos', verificarToken, async (req, res) => {
+  try {
+    const { tipo } = req.body;
 
-        res.json({
-            success: true,
-            data: result.rows
-        });
-
-    } catch (error) {
-        console.error('Error al obtener padres:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener padres',
-            error: error.message
-        });
+    if (!tipo || !String(tipo).trim()) {
+      return res.status(400).json({ success: false, message: 'El tipo es obligatorio' });
     }
+
+    // No hay tabla de tipos en tu esquema actual.
+    // Respondemos OK para que el frontend lo agregue a su lista.
+    res.json({ success: true, message: 'Tipo agregado (virtual)' });
+  } catch (error) {
+    console.error('Error al crear tipo:', error);
+    res.status(500).json({ success: false, message: 'Error al crear tipo' });
+  }
 });
 
-// POST /api/geografico - Crear nuevo registro geográfico
-router.post('/', async (req, res) => {
-    const { nombre, codigo, ubicacion, tipo, fk_id_geografico } = req.body;
-
-    try {
-        // Validaciones
-        if (!nombre || !tipo) {
-            return res.status(400).json({
-                success: false,
-                message: 'El nombre y tipo son requeridos'
-            });
-        }
-
-        // Verificar si ya existe
-        const existe = await pool.query(
-            'SELECT id_geografico FROM geografico WHERE nombre = $1 AND tipo = $2',
-            [nombre, tipo]
-        );
-
-        if (existe.rows.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Ya existe un registro con ese nombre y tipo'
-            });
-        }
-
-        // Crear registro
-        const result = await pool.query(`
-      INSERT INTO geografico (nombre, codigo, ubicacion, tipo, fk_id_geografico)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING *
-    `, [nombre, codigo || null, ubicacion || null, tipo, fk_id_geografico || null]);
-
-        res.status(201).json({
-            success: true,
-            message: 'Registro geográfico creado exitosamente',
-            data: result.rows[0]
-        });
-
-    } catch (error) {
-        console.error('Error al crear registro geográfico:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al crear registro geográfico',
-            error: error.message
-        });
-    }
-});
-
-// PUT /api/geografico/:id - Actualizar registro geográfico
-router.put('/:id', async (req, res) => {
-    const { id } = req.params;
-    const { nombre, codigo, ubicacion, tipo, fk_id_geografico } = req.body;
-
-    try {
-        // Validaciones
-        if (!nombre || !tipo) {
-            return res.status(400).json({
-                success: false,
-                message: 'El nombre y tipo son requeridos'
-            });
-        }
-
-        // Verificar que existe
-        const existe = await pool.query(
-            'SELECT id_geografico FROM geografico WHERE id_geografico = $1',
-            [id]
-        );
-
-        if (existe.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Registro geográfico no encontrado'
-            });
-        }
-
-        // Actualizar
-        const result = await pool.query(`
-      UPDATE geografico
-      SET nombre = $1, codigo = $2, ubicacion = $3, tipo = $4, fk_id_geografico = $5
-      WHERE id_geografico = $6
-      RETURNING *
-    `, [nombre, codigo || null, ubicacion || null, tipo, fk_id_geografico || null, id]);
-
-        res.json({
-            success: true,
-            message: 'Registro geográfico actualizado exitosamente',
-            data: result.rows[0]
-        });
-
-    } catch (error) {
-        console.error('Error al actualizar registro geográfico:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al actualizar registro geográfico',
-            error: error.message
-        });
-    }
-});
-
-// DELETE /api/geografico/:id - Eliminar registro geográfico
-router.delete('/:id', async (req, res) => {
-    const { id } = req.params;
-
-    try {
-        // Verificar si tiene hijos
-        const tieneHijos = await pool.query(
-            'SELECT COUNT(*) as count FROM geografico WHERE fk_id_geografico = $1',
-            [id]
-        );
-
-        if (parseInt(tieneHijos.rows[0].count) > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'No se puede eliminar porque tiene registros dependientes'
-            });
-        }
-
-        // Eliminar
-        const result = await pool.query(
-            'DELETE FROM geografico WHERE id_geografico = $1 RETURNING *',
-            [id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Registro geográfico no encontrado'
-            });
-        }
-
-        res.json({
-            success: true,
-            message: 'Registro geográfico eliminado exitosamente',
-            data: result.rows[0]
-        });
-
-    } catch (error) {
-        console.error('Error al eliminar registro geográfico:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al eliminar registro geográfico',
-            error: error.message
-        });
-    }
-});
-
-// GET /api/geografico/:id - Obtener un registro por ID
-router.get('/:id', async (req, res) => {
-    const { id } = req.params;
-
-    try {
-        const result = await pool.query(`
-      SELECT 
-        g.id_geografico,
-        g.nombre,
-        g.codigo,
-        g.ubicacion,
-        g.tipo,
-        g.fk_id_geografico,
-        padre.nombre as nombre_padre
-      FROM geografico g
-      LEFT JOIN geografico padre ON g.fk_id_geografico = padre.id_geografico
-      WHERE g.id_geografico = $1
-    `, [id]);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Registro geográfico no encontrado'
-            });
-        }
-
-        res.json({
-            success: true,
-            data: result.rows[0]
-        });
-
-    } catch (error) {
-        console.error('Error al obtener registro geográfico:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener registro geográfico',
-            error: error.message
-        });
-    }
-});
-// POST - Reasignar tipo (para poder "eliminar" un tipo)
+// POST - Reasignar tipo (cambiar todos los registros de un tipo a otro)
 router.post('/tipos/reasignar', verificarToken, async (req, res) => {
   try {
     const { tipo_origen, tipo_destino } = req.body;
 
-    if (!tipo_origen || !tipo_destino) {
-      return res.status(400).json({
+    if (!tipo_origen || !String(tipo_origen).trim()) {
+      return res.status(400).json({ success: false, message: 'tipo_origen es obligatorio' });
+    }
+    if (!tipo_destino || !String(tipo_destino).trim()) {
+      return res.status(400).json({ success: false, message: 'tipo_destino es obligatorio' });
+    }
+    if (String(tipo_origen).trim() === String(tipo_destino).trim()) {
+      return res.status(400).json({ success: false, message: 'Los tipos no pueden ser iguales' });
+    }
+
+    const result = await pool.query(
+      `UPDATE geografico SET tipo = $1 WHERE tipo = $2`,
+      [String(tipo_destino).trim(), String(tipo_origen).trim()]
+    );
+
+    res.json({
+      success: true,
+      message: `Tipo reasignado correctamente (${result.rowCount} registros actualizados)`,
+      data: { actualizados: result.rowCount }
+    });
+  } catch (error) {
+    console.error('Error al reasignar tipo:', error);
+    res.status(500).json({ success: false, message: 'Error al reasignar tipo' });
+  }
+});
+
+// DELETE - Eliminar tipo (requiere que NO existan registros con ese tipo)
+// Si quieres eliminarlo "a la fuerza", primero reasigna o borra los registros.
+router.delete('/tipos/:tipo', verificarToken, async (req, res) => {
+  try {
+    const tipo = decodeURIComponent(req.params.tipo || '').trim();
+
+    if (!tipo) {
+      return res.status(400).json({ success: false, message: 'Tipo inválido' });
+    }
+
+    const countRes = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM geografico WHERE tipo = $1`,
+      [tipo]
+    );
+
+    const total = countRes.rows[0]?.total ?? 0;
+
+    if (total > 0) {
+      return res.status(409).json({
         success: false,
-        message: 'tipo_origen y tipo_destino son obligatorios'
+        message: `No se puede eliminar el tipo "${tipo}" porque tiene ${total} registro(s). Reasigna o elimina esos registros primero.`,
+        data: { total }
       });
     }
 
-    if (tipo_origen === tipo_destino) {
-      return res.status(400).json({
+    // No hay una tabla "tipos", así que si no hay registros, "ya no existe".
+    return res.json({
+      success: true,
+      message: `Tipo "${tipo}" eliminado (no había registros asociados).`
+    });
+  } catch (error) {
+    console.error('Error al eliminar tipo:', error);
+    res.status(500).json({ success: false, message: 'Error al eliminar tipo' });
+  }
+});
+
+/**
+ * ==========================
+ * ✅ RUTAS DE REGISTROS (CRUD)
+ * ==========================
+ */
+
+// GET - Obtener todos los registros con nombre del padre
+router.get('/', verificarToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        g.id_geografico,
+        g.nombre,
+        g.codigo,
+        g.ubicacion,
+        g.tipo,
+        g.fk_id_geografico,
+        p.nombre AS nombre_padre
+      FROM geografico g
+      LEFT JOIN geografico p ON p.id_geografico = g.fk_id_geografico
+      ORDER BY g.id_geografico DESC
+    `);
+
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Error al obtener geografico:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener registros geográficos' });
+  }
+});
+
+// GET - Obtener posibles padres (lista general)
+router.get('/padres', verificarToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id_geografico, nombre, tipo
+      FROM geografico
+      ORDER BY nombre
+    `);
+
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Error al obtener padres:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener padres' });
+  }
+});
+
+// GET - Obtener un registro por ID
+router.get('/:id', verificarToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `
+      SELECT 
+        g.id_geografico,
+        g.nombre,
+        g.codigo,
+        g.ubicacion,
+        g.tipo,
+        g.fk_id_geografico,
+        p.nombre AS nombre_padre
+      FROM geografico g
+      LEFT JOIN geografico p ON p.id_geografico = g.fk_id_geografico
+      WHERE g.id_geografico = $1
+      `,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Registro no encontrado' });
+    }
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('Error al obtener registro:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener el registro' });
+  }
+});
+
+// POST - Crear registro
+router.post('/', verificarToken, async (req, res) => {
+  try {
+    const { nombre, codigo, ubicacion, tipo, fk_id_geografico } = req.body;
+
+    if (!nombre || !String(nombre).trim()) {
+      return res.status(400).json({ success: false, message: 'El nombre es obligatorio' });
+    }
+    if (!tipo || !String(tipo).trim()) {
+      return res.status(400).json({ success: false, message: 'El tipo es obligatorio' });
+    }
+
+    const result = await pool.query(
+      `
+      INSERT INTO geografico (nombre, codigo, ubicacion, tipo, fk_id_geografico)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+      `,
+      [
+        String(nombre).trim(),
+        codigo ? String(codigo).trim() : null,
+        ubicacion ? String(ubicacion).trim() : null,
+        String(tipo).trim(),
+        fk_id_geografico ? fk_id_geografico : null
+      ]
+    );
+
+    res.status(201).json({ success: true, message: 'Registro creado', data: result.rows[0] });
+  } catch (error) {
+    console.error('Error al crear registro:', error);
+    res.status(500).json({ success: false, message: 'Error al crear el registro' });
+  }
+});
+
+// PUT - Actualizar registro
+router.put('/:id', verificarToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nombre, codigo, ubicacion, tipo, fk_id_geografico } = req.body;
+
+    if (!nombre || !String(nombre).trim()) {
+      return res.status(400).json({ success: false, message: 'El nombre es obligatorio' });
+    }
+    if (!tipo || !String(tipo).trim()) {
+      return res.status(400).json({ success: false, message: 'El tipo es obligatorio' });
+    }
+
+    const result = await pool.query(
+      `
+      UPDATE geografico
+      SET nombre = $1,
+          codigo = $2,
+          ubicacion = $3,
+          tipo = $4,
+          fk_id_geografico = $5
+      WHERE id_geografico = $6
+      RETURNING *
+      `,
+      [
+        String(nombre).trim(),
+        codigo ? String(codigo).trim() : null,
+        ubicacion ? String(ubicacion).trim() : null,
+        String(tipo).trim(),
+        fk_id_geografico ? fk_id_geografico : null,
+        id
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Registro no encontrado' });
+    }
+
+    res.json({ success: true, message: 'Registro actualizado', data: result.rows[0] });
+  } catch (error) {
+    console.error('Error al actualizar registro:', error);
+    res.status(500).json({ success: false, message: 'Error al actualizar el registro' });
+  }
+});
+
+// DELETE - Eliminar registro
+router.delete('/:id', verificarToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Evitar borrar si tiene hijos
+    const hijos = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM geografico WHERE fk_id_geografico = $1`,
+      [id]
+    );
+
+    const totalHijos = hijos.rows[0]?.total ?? 0;
+
+    if (totalHijos > 0) {
+      return res.status(409).json({
         success: false,
-        message: 'tipo_origen y tipo_destino no pueden ser iguales'
+        message: `No se puede eliminar: este registro tiene ${totalHijos} hijo(s). Elimina o reasigna sus hijos primero.`,
+        data: { totalHijos }
       });
     }
 
     const result = await pool.query(
-      `UPDATE geografico
-       SET tipo = $1
-       WHERE tipo = $2`,
-      [tipo_destino, tipo_origen]
+      `DELETE FROM geografico WHERE id_geografico = $1 RETURNING *`,
+      [id]
     );
 
-    return res.json({
-      success: true,
-      message: `Se reasignaron ${result.rowCount} registro(s) de "${tipo_origen}" a "${tipo_destino}"`,
-      data: { updated: result.rowCount }
-    });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Registro no encontrado' });
+    }
+
+    res.json({ success: true, message: 'Registro eliminado', data: result.rows[0] });
   } catch (error) {
-    console.error('Error al reasignar tipo:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error al reasignar tipo'
-    });
+    console.error('Error al eliminar registro:', error);
+    res.status(500).json({ success: false, message: 'Error al eliminar el registro' });
   }
 });
 
