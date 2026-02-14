@@ -6,502 +6,296 @@ const router = express.Router();
 
 // GET /api/usuarios/roles - Obtener todos los roles
 router.get('/roles', async (req, res) => {
-    try {
-        const result = await pool.query(`
+  try {
+    const result = await pool.query(`
       SELECT id_rol, nombre, descripcion
       FROM rol
       ORDER BY nombre
     `);
 
-        res.json({
-            success: true,
-            data: result.rows
-        });
-
-    } catch (error) {
-        console.error('Error al obtener roles:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener roles',
-            error: error.message
-        });
-    }
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Error al obtener roles:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener roles',
+      error: error.message
+    });
+  }
 });
 
 // GET /api/usuarios - Obtener todos los usuarios
 router.get('/', async (req, res) => {
-    try {
-        const result = await pool.query(`
-      SELECT 
+  try {
+    const result = await pool.query(`
+      SELECT
         u.id_usuario,
         u.nombre_usuario,
         u.fecha_fin,
         u.id_rol,
-        u.id_persona,
-        p.nombre,
-        p.apellido_paterno,
-        p.apellido_materno,
-        p.ci,
-        p.celular,
-        p.email,
         r.nombre as rol_nombre,
         r.descripcion as rol_descripcion
       FROM usuario u
-      INNER JOIN persona p ON u.id_persona = p.id_persona
       LEFT JOIN rol r ON u.id_rol = r.id_rol
       ORDER BY u.id_usuario DESC
     `);
 
-        // Formatear la respuesta
-        const usuarios = result.rows.map(u => ({
-            id_usuario: u.id_usuario,
-            nombre_usuario: u.nombre_usuario,
-            id_rol: u.id_rol,
-            activo: !u.fecha_fin || new Date(u.fecha_fin) > new Date(),
-            persona: {
-                nombre: u.nombre,
-                apellido_paterno: u.apellido_paterno,
-                apellido_materno: u.apellido_materno,
-                ci: u.ci,
-                celular: u.celular,
-                email: u.email
-            },
-            roles: u.rol_nombre ? [{ name: u.rol_nombre, descripcion: u.rol_descripcion }] : []
-        }));
+    const usuarios = result.rows.map(u => ({
+      id_usuario: u.id_usuario,
+      nombre_usuario: u.nombre_usuario,
+      id_rol: u.id_rol,
+      activo: !u.fecha_fin || new Date(u.fecha_fin) > new Date(),
+      rol: u.rol_nombre
+        ? { nombre: u.rol_nombre, descripcion: u.rol_descripcion }
+        : null
+    }));
 
-        res.json({
-            success: true,
-            data: usuarios
-        });
-
-    } catch (error) {
-        console.error('Error al obtener usuarios:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener usuarios',
-            error: error.message
-        });
-    }
+    res.json({ success: true, data: usuarios });
+  } catch (error) {
+    console.error('Error al obtener usuarios:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener usuarios',
+      error: error.message
+    });
+  }
 });
 
-// POST /api/usuarios - Crear nuevo usuario
+// POST /api/usuarios - Crear nuevo usuario (solo nombre_usuario, contrasena, id_rol)
 router.post('/', async (req, res) => {
-    let {
-        nombre_usuario,
-        contrasena,
-        id_rol,
-        persona
-    } = req.body;
+  let { nombre_usuario, contrasena, id_rol } = req.body;
 
-    // Convertir id_rol a número si viene como string
-    id_rol = parseInt(id_rol);
+  id_rol = parseInt(id_rol, 10);
 
-    try {
-        // Validaciones
-        if (!nombre_usuario || !contrasena || !persona) {
-            return res.status(400).json({
-                success: false,
-                message: 'Faltan campos requeridos'
-            });
-        }
-
-        // Validar que id_rol sea un número válido
-        if (isNaN(id_rol) || !id_rol) {
-            return res.status(400).json({
-                success: false,
-                message: 'El ID del rol no es válido'
-            });
-        }
-
-        if (!persona.nombre || !persona.apellido_paterno || !persona.ci) {
-            return res.status(400).json({
-                success: false,
-                message: 'Faltan datos de la persona (nombre, apellido_paterno, ci)'
-            });
-        }
-
-        // Verificar si el usuario ya existe
-        const usuarioExiste = await pool.query(
-            'SELECT id_usuario FROM usuario WHERE nombre_usuario = $1',
-            [nombre_usuario]
-        );
-
-        if (usuarioExiste.rows.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'El nombre de usuario ya existe'
-            });
-        }
-
-        // Verificar si el CI ya existe
-        const ciExiste = await pool.query(
-            'SELECT id_persona FROM persona WHERE ci = $1',
-            [persona.ci]
-        );
-
-        if (ciExiste.rows.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'El CI ya está registrado'
-            });
-        }
-
-        // Hashear contraseña
-        const hashedPassword = await bcrypt.hash(contrasena, 10);
-
-        // Iniciar transacción
-        await pool.query('BEGIN');
-
-        try {
-            // 1. Crear persona
-            const personaResult = await pool.query(`
-        INSERT INTO persona (nombre, apellido_paterno, apellido_materno, ci, celular, email)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id_persona
-      `, [
-                persona.nombre,
-                persona.apellido_paterno,
-                persona.apellido_materno || null,
-                persona.ci,
-                persona.celular || null,
-                persona.email || null
-            ]);
-
-            const id_persona = personaResult.rows[0].id_persona;
-
-            // 2. Crear usuario
-            const usuarioResult = await pool.query(`
-        INSERT INTO usuario (nombre_usuario, contrasena, id_rol, id_persona)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id_usuario
-      `, [nombre_usuario, hashedPassword, id_rol, id_persona]);
-
-            const id_usuario = usuarioResult.rows[0].id_usuario;
-
-            // Commit transacción
-            await pool.query('COMMIT');
-
-            // Obtener el usuario completo creado
-            const usuarioCompleto = await pool.query(`
-        SELECT 
-          u.id_usuario,
-          u.nombre_usuario,
-          u.id_rol,
-          u.id_persona,
-          p.nombre,
-          p.apellido_paterno,
-          p.apellido_materno,
-          p.ci,
-          p.celular,
-          p.email,
-          r.nombre as rol_nombre
-        FROM usuario u
-        INNER JOIN persona p ON u.id_persona = p.id_persona
-        LEFT JOIN rol r ON u.id_rol = r.id_rol
-        WHERE u.id_usuario = $1
-      `, [id_usuario]);
-
-            res.status(201).json({
-                success: true,
-                message: 'Usuario creado exitosamente',
-                data: usuarioCompleto.rows[0]
-            });
-
-        } catch (error) {
-            // Rollback en caso de error
-            await pool.query('ROLLBACK');
-            throw error;
-        }
-
-    } catch (error) {
-        console.error('Error al crear usuario:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al crear usuario',
-            error: error.message
-        });
+  try {
+    if (!nombre_usuario || !contrasena) {
+      return res.status(400).json({
+        success: false,
+        message: 'Faltan campos requeridos (nombre_usuario, contrasena)'
+      });
     }
+
+    if (isNaN(id_rol) || !id_rol) {
+      return res.status(400).json({
+        success: false,
+        message: 'El ID del rol no es válido'
+      });
+    }
+
+    // Verificar si el usuario ya existe
+    const usuarioExiste = await pool.query(
+      'SELECT id_usuario FROM usuario WHERE nombre_usuario = $1',
+      [nombre_usuario]
+    );
+
+    if (usuarioExiste.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'El nombre de usuario ya existe'
+      });
+    }
+
+    // Hashear contraseña
+    const hashedPassword = await bcrypt.hash(contrasena, 10);
+
+    // Crear usuario
+    const usuarioResult = await pool.query(
+      `
+      INSERT INTO usuario (nombre_usuario, contrasena, id_rol)
+      VALUES ($1, $2, $3)
+      RETURNING id_usuario, nombre_usuario, id_rol, fecha_fin
+      `,
+      [nombre_usuario, hashedPassword, id_rol]
+    );
+
+    // Traer rol para devolverlo bonito
+    const rolResult = await pool.query(
+      `SELECT nombre, descripcion FROM rol WHERE id_rol = $1`,
+      [id_rol]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Usuario creado exitosamente',
+      data: {
+        ...usuarioResult.rows[0],
+        activo: true,
+        rol: rolResult.rows[0] || null
+      }
+    });
+  } catch (error) {
+    console.error('Error al crear usuario:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al crear usuario',
+      error: error.message
+    });
+  }
 });
 
 // GET /api/usuarios/:id - Obtener un usuario por ID
 router.get('/:id', async (req, res) => {
-    const { id } = req.params;
+  const { id } = req.params;
 
-    try {
-        const result = await pool.query(`
-      SELECT 
+  try {
+    const result = await pool.query(
+      `
+      SELECT
         u.id_usuario,
         u.nombre_usuario,
         u.fecha_fin,
         u.id_rol,
-        u.id_persona,
-        p.nombre,
-        p.apellido_paterno,
-        p.apellido_materno,
-        p.ci,
-        p.celular,
-        p.email,
         r.nombre as rol_nombre,
         r.descripcion as rol_descripcion
       FROM usuario u
-      INNER JOIN persona p ON u.id_persona = p.id_persona
       LEFT JOIN rol r ON u.id_rol = r.id_rol
       WHERE u.id_usuario = $1
-    `, [id]);
+      `,
+      [id]
+    );
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Usuario no encontrado'
-            });
-        }
-
-        const u = result.rows[0];
-        const usuario = {
-            id_usuario: u.id_usuario,
-            nombre_usuario: u.nombre_usuario,
-            activo: !u.fecha_fin || new Date(u.fecha_fin) > new Date(),
-            persona: {
-                nombre: u.nombre,
-                apellido_paterno: u.apellido_paterno,
-                apellido_materno: u.apellido_materno,
-                ci: u.ci,
-                celular: u.celular,
-                email: u.email
-            },
-            roles: u.rol_nombre ? [{ name: u.rol_nombre, descripcion: u.rol_descripcion }] : []
-        };
-
-        res.json({
-            success: true,
-            data: usuario
-        });
-
-    } catch (error) {
-        console.error('Error al obtener usuario:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener usuario',
-            error: error.message
-        });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
     }
+
+    const u = result.rows[0];
+
+    res.json({
+      success: true,
+      data: {
+        id_usuario: u.id_usuario,
+        nombre_usuario: u.nombre_usuario,
+        id_rol: u.id_rol,
+        activo: !u.fecha_fin || new Date(u.fecha_fin) > new Date(),
+        rol: u.rol_nombre ? { nombre: u.rol_nombre, descripcion: u.rol_descripcion } : null
+      }
+    });
+  } catch (error) {
+    console.error('Error al obtener usuario:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener usuario',
+      error: error.message
+    });
+  }
 });
 
-// PUT /api/usuarios/:id - Actualizar usuario
+// PUT /api/usuarios/:id - Actualizar usuario (nombre_usuario, id_rol y opcional contrasena)
 router.put('/:id', async (req, res) => {
-    const { id } = req.params;
-    let {
-        nombre_usuario,
-        contrasena,
-        id_rol,
-        persona
-    } = req.body;
+  const { id } = req.params;
+  let { nombre_usuario, contrasena, id_rol } = req.body;
 
-    // Convertir id_rol a número si viene como string
-    id_rol = parseInt(id_rol);
+  id_rol = parseInt(id_rol, 10);
 
-    // Log para depuración
-    console.log('📝 Datos recibidos para actualizar usuario:', {
-        id,
-        nombre_usuario,
-        id_rol,
-        tipo_id_rol: typeof id_rol,
-        persona
-    });
-
-    try {
-        // Validaciones
-        if (!nombre_usuario || !persona) {
-            return res.status(400).json({
-                success: false,
-                message: 'Faltan campos requeridos'
-            });
-        }
-
-        // Validar que id_rol sea un número válido
-        if (isNaN(id_rol) || !id_rol) {
-            return res.status(400).json({
-                success: false,
-                message: 'El ID del rol no es válido'
-            });
-        }
-
-        if (!persona.nombre || !persona.apellido_paterno || !persona.ci) {
-            return res.status(400).json({
-                success: false,
-                message: 'Faltan datos de la persona (nombre, apellido_paterno, ci)'
-            });
-        }
-
-        // Verificar si el usuario existe
-        const usuarioActual = await pool.query(
-            'SELECT id_persona, nombre_usuario FROM usuario WHERE id_usuario = $1',
-            [id]
-        );
-
-        if (usuarioActual.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Usuario no encontrado'
-            });
-        }
-
-        // Verificar si el nuevo nombre de usuario ya existe (si cambió)
-        if (nombre_usuario !== usuarioActual.rows[0].nombre_usuario) {
-            const usuarioExiste = await pool.query(
-                'SELECT id_usuario FROM usuario WHERE nombre_usuario = $1 AND id_usuario != $2',
-                [nombre_usuario, id]
-            );
-
-            if (usuarioExiste.rows.length > 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'El nombre de usuario ya existe'
-                });
-            }
-        }
-
-        const id_persona = usuarioActual.rows[0].id_persona;
-
-        // Verificar si el CI ya existe en otra persona
-        const ciExiste = await pool.query(
-            'SELECT id_persona FROM persona WHERE ci = $1 AND id_persona != $2',
-            [persona.ci, id_persona]
-        );
-
-        if (ciExiste.rows.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'El CI ya está registrado en otra persona'
-            });
-        }
-
-        // Iniciar transacción
-        await pool.query('BEGIN');
-
-        try {
-            // 1. Actualizar persona
-            await pool.query(`
-                UPDATE persona 
-                SET nombre = $1, 
-                    apellido_paterno = $2, 
-                    apellido_materno = $3, 
-                    ci = $4, 
-                    celular = $5, 
-                    email = $6
-                WHERE id_persona = $7
-            `, [
-                persona.nombre,
-                persona.apellido_paterno,
-                persona.apellido_materno || null,
-                persona.ci,
-                persona.celular || null,
-                persona.email || null,
-                id_persona
-            ]);
-
-            // 2. Actualizar usuario
-            let updateQuery = `
-                UPDATE usuario 
-                SET nombre_usuario = $1, 
-                    id_rol = $2
-            `;
-            let params = [nombre_usuario, id_rol];
-
-            // Si se proporciona nueva contraseña, hashearla y actualizarla
-            if (contrasena && contrasena.trim() !== '') {
-                const hashedPassword = await bcrypt.hash(contrasena, 10);
-                updateQuery += `, contrasena = $3 WHERE id_usuario = $4`;
-                params.push(hashedPassword, id);
-            } else {
-                updateQuery += ` WHERE id_usuario = $3`;
-                params.push(id);
-            }
-
-            await pool.query(updateQuery, params);
-
-            // Commit transacción
-            await pool.query('COMMIT');
-
-            // Obtener el usuario actualizado
-            const usuarioActualizado = await pool.query(`
-                SELECT 
-                    u.id_usuario,
-                    u.nombre_usuario,
-                    u.id_rol,
-                    u.id_persona,
-                    p.nombre,
-                    p.apellido_paterno,
-                    p.apellido_materno,
-                    p.ci,
-                    p.celular,
-                    p.email,
-                    r.nombre as rol_nombre
-                FROM usuario u
-                INNER JOIN persona p ON u.id_persona = p.id_persona
-                LEFT JOIN rol r ON u.id_rol = r.id_rol
-                WHERE u.id_usuario = $1
-            `, [id]);
-
-            res.json({
-                success: true,
-                message: 'Usuario actualizado exitosamente',
-                data: usuarioActualizado.rows[0]
-            });
-
-        } catch (error) {
-            // Rollback en caso de error
-            await pool.query('ROLLBACK');
-            throw error;
-        }
-
-    } catch (error) {
-        console.error('Error al actualizar usuario:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al actualizar usuario',
-            error: error.message
-        });
+  try {
+    if (!nombre_usuario) {
+      return res.status(400).json({
+        success: false,
+        message: 'Falta nombre_usuario'
+      });
     }
+
+    if (isNaN(id_rol) || !id_rol) {
+      return res.status(400).json({
+        success: false,
+        message: 'El ID del rol no es válido'
+      });
+    }
+
+    const usuarioActual = await pool.query(
+      'SELECT id_usuario, nombre_usuario FROM usuario WHERE id_usuario = $1',
+      [id]
+    );
+
+    if (usuarioActual.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    // Si cambió nombre_usuario, validar duplicado
+    if (nombre_usuario !== usuarioActual.rows[0].nombre_usuario) {
+      const existe = await pool.query(
+        'SELECT id_usuario FROM usuario WHERE nombre_usuario = $1 AND id_usuario != $2',
+        [nombre_usuario, id]
+      );
+      if (existe.rows.length > 0) {
+        return res.status(400).json({ success: false, message: 'El nombre de usuario ya existe' });
+      }
+    }
+
+    // Armar update dinámico
+    let updateQuery = `
+      UPDATE usuario
+      SET nombre_usuario = $1,
+          id_rol = $2
+    `;
+    const params = [nombre_usuario, id_rol];
+
+    if (contrasena && contrasena.trim() !== '') {
+      const hashedPassword = await bcrypt.hash(contrasena, 10);
+      updateQuery += `, contrasena = $3 WHERE id_usuario = $4 RETURNING id_usuario, nombre_usuario, id_rol, fecha_fin`;
+      params.push(hashedPassword, id);
+    } else {
+      updateQuery += ` WHERE id_usuario = $3 RETURNING id_usuario, nombre_usuario, id_rol, fecha_fin`;
+      params.push(id);
+    }
+
+    const updated = await pool.query(updateQuery, params);
+
+    const rolResult = await pool.query(
+      `SELECT nombre, descripcion FROM rol WHERE id_rol = $1`,
+      [id_rol]
+    );
+
+    res.json({
+      success: true,
+      message: 'Usuario actualizado exitosamente',
+      data: {
+        ...updated.rows[0],
+        activo: !updated.rows[0].fecha_fin || new Date(updated.rows[0].fecha_fin) > new Date(),
+        rol: rolResult.rows[0] || null
+      }
+    });
+  } catch (error) {
+    console.error('Error al actualizar usuario:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al actualizar usuario',
+      error: error.message
+    });
+  }
 });
 
 // DELETE /api/usuarios/:id - Eliminar usuario (soft delete)
 router.delete('/:id', async (req, res) => {
-    const { id } = req.params;
+  const { id } = req.params;
 
-    try {
-        // Verificar si el usuario existe
-        const usuarioExiste = await pool.query(
-            'SELECT id_usuario, nombre_usuario FROM usuario WHERE id_usuario = $1',
-            [id]
-        );
+  try {
+    const usuarioExiste = await pool.query(
+      'SELECT id_usuario, nombre_usuario FROM usuario WHERE id_usuario = $1',
+      [id]
+    );
 
-        if (usuarioExiste.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Usuario no encontrado'
-            });
-        }
-
-        // Soft delete: establecer fecha_fin
-        await pool.query(
-            'UPDATE usuario SET fecha_fin = CURRENT_TIMESTAMP WHERE id_usuario = $1',
-            [id]
-        );
-
-        res.json({
-            success: true,
-            message: `Usuario "${usuarioExiste.rows[0].nombre_usuario}" desactivado exitosamente`
-        });
-
-    } catch (error) {
-        console.error('Error al eliminar usuario:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al eliminar usuario',
-            error: error.message
-        });
+    if (usuarioExiste.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
     }
+
+    await pool.query(
+      'UPDATE usuario SET fecha_fin = CURRENT_TIMESTAMP WHERE id_usuario = $1',
+      [id]
+    );
+
+    res.json({
+      success: true,
+      message: `Usuario "${usuarioExiste.rows[0].nombre_usuario}" desactivado exitosamente`
+    });
+  } catch (error) {
+    console.error('Error al eliminar usuario:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al eliminar usuario',
+      error: error.message
+    });
+  }
 });
 
 export default router;
