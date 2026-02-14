@@ -61,10 +61,10 @@ const ResultadosEnVivo = () => {
     const maxVotos = Math.max(...resultados.map(r => r.total_votos || 0), 1);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8">
-            {/* Header */}
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+            {/* Header con gradiente NGP */}
             <div className="max-w-7xl mx-auto mb-8">
-                <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-3xl shadow-2xl p-8">
+                <div className="bg-gradient-to-r from-[#1E3A8A] to-[#152a63] rounded-3xl shadow-2xl p-8">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <button
@@ -89,7 +89,7 @@ const ResultadosEnVivo = () => {
                         <button
                             onClick={cargarResultados}
                             disabled={loading}
-                            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-lg text-white px-6 py-3 rounded-xl font-bold transition"
+                            className="flex items-center gap-2 bg-[#F59E0B] hover:bg-[#e68906] text-white px-6 py-3 rounded-xl font-bold transition shadow-lg"
                         >
                             <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
                             Actualizar
@@ -97,47 +97,49 @@ const ResultadosEnVivo = () => {
                     </div>
 
                     {ultimaActualizacion && (
-                        <div className="mt-4 text-white/80 text-sm">
+                        <div className="mt-4 text-white/80 text-sm flex items-center gap-2">
+                            <span className="w-2 h-2 bg-[#10B981] rounded-full animate-pulse"></span>
                             Última actualización: {ultimaActualizacion.toLocaleTimeString()}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Estadísticas Rápidas */}
+            {/* Estadísticas Rápidas con colores NGP */}
             <div className="max-w-7xl mx-auto mb-8">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="bg-white rounded-2xl shadow-lg p-6">
+                    <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#1E3A8A]">
                         <div className="flex items-center gap-3 mb-2">
-                            <FileText className="w-6 h-6 text-blue-600" />
+                            <FileText className="w-6 h-6 text-[#1E3A8A]" />
                             <span className="text-gray-600 font-semibold">Actas Procesadas</span>
                         </div>
-                        <p className="text-4xl font-black text-gray-900">{resumen.totalActas}</p>
+                        <p className="text-4xl font-black text-[#1E3A8A]">{resumen.totalActas}</p>
                     </div>
 
-                    <div className="bg-white rounded-2xl shadow-lg p-6">
+                    <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#F59E0B]">
                         <div className="flex items-center gap-3 mb-2">
-                            <Users className="w-6 h-6 text-green-600" />
+                            <Users className="w-6 h-6 text-[#F59E0B]" />
                             <span className="text-gray-600 font-semibold">Total Votos</span>
                         </div>
-                        <p className="text-4xl font-black text-gray-900">{resumen.totalVotos.toLocaleString()}</p>
+                        <p className="text-4xl font-black text-[#F59E0B]">{resumen.totalVotos.toLocaleString()}</p>
                     </div>
 
-                    <div className="bg-white rounded-2xl shadow-lg p-6">
+                    <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#10B981]">
                         <div className="flex items-center gap-3 mb-2">
-                            <CheckCircle className="w-6 h-6 text-purple-600" />
+                            <CheckCircle className="w-6 h-6 text-[#10B981]" />
                             <span className="text-gray-600 font-semibold">Validadas</span>
                         </div>
-                        <p className="text-4xl font-black text-gray-900">{resumen.actasValidadas}</p>
+                        <p className="text-4xl font-black text-[#10B981]">{resumen.actasValidadas}</p>
                     </div>
 
-                    <div className="bg-white rounded-2xl shadow-lg p-6">
+                    <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#1E3A8A]">
                         <div className="flex items-center gap-3 mb-2">
-                            <TrendingUp className="w-6 h-6 text-orange-600" />
+                            <TrendingUp className="w-6 h-6 text-[#1E3A8A]" />
                             <span className="text-gray-600 font-semibold">Participación</span>
                         </div>
-                        <p className="text-4xl font-black text-gray-900">
-                            {resumen.totalActas > 0 ? '92%' : '0%'}
+                        <p className="text-4xl font-black text-[#1E3A8A]">
+                            {resumen.totalActas > 0 ? 
+                                ((resumen.actasValidadas / resumen.totalActas) * 100).toFixed(1) : '0'}%
                         </p>
                     </div>
                 </div>
@@ -147,13 +149,13 @@ const ResultadosEnVivo = () => {
             <div className="max-w-7xl mx-auto">
                 <div className="bg-white rounded-3xl shadow-2xl p-8">
                     <h2 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-3">
-                        <Trophy className="w-8 h-8 text-yellow-500" />
+                        <Trophy className="w-8 h-8 text-[#F59E0B]" />
                         Resultados Por Frente Político
                     </h2>
 
                     {loading && resultados.length === 0 ? (
                         <div className="text-center py-12">
-                            <RefreshCw className="w-12 h-12 text-gray-400 animate-spin mx-auto mb-4" />
+                            <RefreshCw className="w-12 h-12 text-[#1E3A8A] animate-spin mx-auto mb-4" />
                             <p className="text-gray-600">Cargando resultados...</p>
                         </div>
                     ) : resultados.length === 0 ? (
@@ -168,9 +170,7 @@ const ResultadosEnVivo = () => {
                         <div className="space-y-8">
                             {/* Contenedor tipo gráfico */}
                             <div className="bg-gray-50 rounded-2xl p-6 pt-14 border border-gray-200 overflow-visible">
-
-
-                                {/* ✅ Centradas: justify-center */}
+                                {/* Barras centradas */}
                                 <div className="flex items-end justify-center gap-10 overflow-x-auto pb-2">
                                     {resultados.map((frente, index) => {
                                         const votos = frente.total_votos || 0;
@@ -184,31 +184,27 @@ const ResultadosEnVivo = () => {
                                                 className="relative flex flex-col items-center min-w-[120px]"
                                                 title={`${frente.siglas} - ${votos.toLocaleString()} votos`}
                                             >
-                                    
-
-
                                                 {/* Valor arriba */}
                                                 <div className="text-center mb-2">
-                                                    <p className="text-sm font-black text-gray-900">
+                                                    <p className="text-sm font-black text-[#1E3A8A]">
                                                         {votos.toLocaleString()}
                                                     </p>
                                                     <p
                                                         className="text-xs font-bold"
-                                                        style={{ color: frente.color || '#E31E24' }}
+                                                        style={{ color: frente.color || '#1E3A8A' }}
                                                     >
                                                         {porcentaje}%
                                                     </p>
                                                 </div>
 
-                                                {/* ✅ Barra cuadrada */}
+                                                {/* Barra cuadrada */}
                                                 <div className="w-full h-64 flex items-end justify-center">
-                                                    {/* Contenedor cuadrado (sin rounded) */}
-                                                    <div className="relative w-12 h-full bg-gray-200 overflow-hidden">
+                                                    <div className="relative w-12 h-full bg-gray-200 overflow-hidden rounded-t-lg">
                                                         <div
                                                             className="absolute bottom-0 left-0 right-0 transition-all duration-1000 ease-out"
                                                             style={{
                                                                 height: `${barHeight}%`,
-                                                                backgroundColor: frente.color || '#E31E24'
+                                                                backgroundColor: frente.color || '#1E3A8A'
                                                             }}
                                                         />
                                                     </div>
@@ -216,7 +212,7 @@ const ResultadosEnVivo = () => {
 
                                                 {/* Etiqueta abajo */}
                                                 <div className="mt-3 text-center">
-                                                    <p className="text-xs font-black text-gray-900">{frente.siglas}</p>
+                                                    <p className="text-xs font-black text-[#1E3A8A]">{frente.siglas}</p>
                                                     <p className="text-[11px] text-gray-500 line-clamp-2">
                                                         {frente.nombre}
                                                     </p>
@@ -243,12 +239,12 @@ const ResultadosEnVivo = () => {
                                             key={`${frente.id_frente}-detalle`}
                                             className={`relative border-2 rounded-2xl p-6 transition-all hover:shadow-lg ${
                                                 esGanador
-                                                    ? 'border-yellow-400 bg-yellow-50'
-                                                    : 'border-gray-200 bg-white'
+                                                    ? 'border-[#F59E0B] bg-[#F59E0B] bg-opacity-5'
+                                                    : 'border-gray-200 bg-white hover:border-[#1E3A8A]'
                                             }`}
                                         >
                                             {esGanador && (
-                                                <div className="absolute -top-3 -right-3 bg-yellow-500 text-white p-2 rounded-full shadow-lg">
+                                                <div className="absolute -top-3 -right-3 bg-[#F59E0B] text-white p-2 rounded-full shadow-lg">
                                                     <Medal className="w-6 h-6" />
                                                 </div>
                                             )}
@@ -257,22 +253,22 @@ const ResultadosEnVivo = () => {
                                                 <div className="flex items-center gap-4">
                                                     <div
                                                         className="w-14 h-14 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg"
-                                                        style={{ backgroundColor: frente.color || '#E31E24' }}
+                                                        style={{ backgroundColor: frente.color || '#1E3A8A' }}
                                                     >
                                                         {index + 1}
                                                     </div>
                                                     <div>
-                                                        <h3 className="text-xl font-bold text-gray-900 mb-1">
+                                                        <h3 className="text-xl font-bold text-[#1E3A8A] mb-1">
                                                             {frente.siglas}
                                                         </h3>
                                                         <p className="text-sm text-gray-600">{frente.nombre}</p>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-3xl font-black text-gray-900 mb-1">
+                                                    <p className="text-3xl font-black text-[#1E3A8A] mb-1">
                                                         {votos.toLocaleString()}
                                                     </p>
-                                                    <p className="text-lg font-bold" style={{ color: frente.color || '#E31E24' }}>
+                                                    <p className="text-lg font-bold" style={{ color: frente.color || '#1E3A8A' }}>
                                                         {porcentaje}%
                                                     </p>
                                                 </div>
@@ -281,13 +277,13 @@ const ResultadosEnVivo = () => {
                                             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
                                                 <div>
                                                     <span className="text-xs text-gray-500">Votos Alcalde:</span>
-                                                    <span className="ml-2 font-bold text-gray-900">
+                                                    <span className="ml-2 font-bold text-[#F59E0B]">
                                                         {frente.votos_alcalde?.toLocaleString() || 0}
                                                     </span>
                                                 </div>
                                                 <div>
                                                     <span className="text-xs text-gray-500">Votos Concejal:</span>
-                                                    <span className="ml-2 font-bold text-gray-900">
+                                                    <span className="ml-2 font-bold text-[#10B981]">
                                                         {frente.votos_concejal?.toLocaleString() || 0}
                                                     </span>
                                                 </div>
@@ -302,21 +298,27 @@ const ResultadosEnVivo = () => {
                     {/* Votos Nulos y Blancos */}
                     {resultados.length > 0 && (
                         <div className="grid grid-cols-2 gap-6 mt-8 pt-8 border-t-2 border-gray-200">
-                            <div className="bg-gray-100 rounded-xl p-6">
-                                <h4 className="text-gray-600 font-semibold mb-2">Votos Nulos</h4>
-                                <p className="text-3xl font-black text-gray-900">
+                            <div className="bg-red-50 rounded-xl p-6 border border-red-200">
+                                <h4 className="text-red-700 font-semibold mb-2 flex items-center gap-2">
+                                    <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                                    Votos Nulos
+                                </h4>
+                                <p className="text-3xl font-black text-red-700">
                                     {resumen.votosNulos.toLocaleString()}
                                 </p>
-                                <p className="text-sm text-gray-600 mt-1">
+                                <p className="text-sm text-red-600 mt-1">
                                     {calcularPorcentaje(resumen.votosNulos, resumen.totalVotos)}% del total
                                 </p>
                             </div>
-                            <div className="bg-gray-100 rounded-xl p-6">
-                                <h4 className="text-gray-600 font-semibold mb-2">Votos Blancos</h4>
-                                <p className="text-3xl font-black text-gray-900">
+                            <div className="bg-[#F59E0B] bg-opacity-5 rounded-xl p-6 border border-[#F59E0B] border-opacity-30">
+                                <h4 className="text-[#F59E0B] font-semibold mb-2 flex items-center gap-2">
+                                    <span className="w-2 h-2 bg-[#F59E0B] rounded-full"></span>
+                                    Votos Blancos
+                                </h4>
+                                <p className="text-3xl font-black text-[#F59E0B]">
                                     {resumen.votosBlancos.toLocaleString()}
                                 </p>
-                                <p className="text-sm text-gray-600 mt-1">
+                                <p className="text-sm text-[#F59E0B] mt-1">
                                     {calcularPorcentaje(resumen.votosBlancos, resumen.totalVotos)}% del total
                                 </p>
                             </div>
