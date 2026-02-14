@@ -45,9 +45,8 @@ const Transcripcion = () => {
     const [selectedMesa, setSelectedMesa] = useState(null);
 
     // Votos
-    const [votosGobernador, setVotosGobernador] = useState([]);
-    const [votosAsambleistaT, setVotosAsambleistaT] = useState([]);
-    const [votosAsambleistaP, setVotosAsambleistaP] = useState([]);
+    const [votosAlcalde, setVotosAlcalde] = useState([]);
+    const [votosConcejal, setVotosConcejal] = useState([]);
     const [votosNulos, setVotosNulos] = useState(0);
     const [votosBlancos, setVotosBlancos] = useState(0);
     const [observaciones, setObservaciones] = useState('');
@@ -156,9 +155,8 @@ const Transcripcion = () => {
                     color: f.color,
                     cantidad: 0
                 }));
-                setVotosGobernador(votosIniciales);
-                setVotosAsambleistaT(JSON.parse(JSON.stringify(votosIniciales)));
-                setVotosAsambleistaP(JSON.parse(JSON.stringify(votosIniciales)));
+                setVotosAlcalde(votosIniciales);
+                setVotosConcejal(JSON.parse(JSON.stringify(votosIniciales)));
             }
         } catch (error) {
             console.error('Error al cargar frentes:', error);
@@ -196,11 +194,9 @@ const Transcripcion = () => {
     };
 
     const updateVotos = (tipo, idFrente, value) => {
-        const setVotos = tipo === 'gobernador' ? setVotosGobernador : 
-                         tipo === 'asambleista_territorio' ? setVotosAsambleistaT : 
-                         setVotosAsambleistaP;
+        const setVotos = tipo === 'alcalde' ? setVotosAlcalde : setVotosConcejal;
         setVotos(prev => prev.map(v =>
-            v.id_frente === idFrente ? { ...v, cantidad: Math.max(0, value) } : v
+            v.id_frente === idFrente ? { ...v, cantidad: value } : v
         ));
     };
     
@@ -232,6 +228,15 @@ const Transcripcion = () => {
     };
 
     const handleRegistrarActa = async () => {
+        // Validar que haya votos registrados
+        const hayVotosAlcalde = votosAlcalde.some(v => v.cantidad > 0);
+        const hayVotosConcejal = votosConcejal.some(v => v.cantidad > 0);
+        
+        if (!hayVotosAlcalde && !hayVotosConcejal && votosNulos === 0 && votosBlancos === 0) {
+            mostrarNotificacion('error', 'Debe registrar al menos un voto');
+            return;
+        }
+
         setIsSaving(true);
 
         try {
@@ -243,9 +248,13 @@ const Transcripcion = () => {
             formData.append('votos_nulos', votosNulos);
             formData.append('votos_blancos', votosBlancos);
             formData.append('observaciones', observaciones);
-            formData.append('votos_gobernador', JSON.stringify(votosGobernador.filter(v => v.cantidad > 0)));
-            formData.append('votos_asambleista_territorio', JSON.stringify(votosAsambleistaT.filter(v => v.cantidad > 0)));
-            formData.append('votos_asambleista_poblacion', JSON.stringify(votosAsambleistaP.filter(v => v.cantidad > 0)));
+            
+            // Filtrar solo votos con cantidad > 0
+            const votosAlcaldeFiltrados = votosAlcalde.filter(v => v.cantidad > 0);
+            const votosConcejalFiltrados = votosConcejal.filter(v => v.cantidad > 0);
+            
+            formData.append('votos_alcalde', JSON.stringify(votosAlcaldeFiltrados));
+            formData.append('votos_concejal', JSON.stringify(votosConcejalFiltrados));
             
             if (imagenActa) {
                 formData.append('imagen_acta', imagenActa);
@@ -263,6 +272,11 @@ const Transcripcion = () => {
 
             if (data.success) {
                 mostrarNotificacion('success', '¡Acta registrada exitosamente!');
+                // Disparar evento para actualizar historial
+                window.dispatchEvent(new CustomEvent('acta-registrada', { 
+                    detail: { id_acta: data.data.id_acta }
+                }));
+                
                 setTimeout(() => {
                     setShowModal(false);
                     resetForm();
@@ -297,16 +311,14 @@ const Transcripcion = () => {
                 color: f.color,
                 cantidad: 0
             }));
-            setVotosGobernador(votosIniciales);
-            setVotosAsambleistaT(votosIniciales);
-            setVotosAsambleistaP(votosIniciales);
+            setVotosAlcalde(votosIniciales);
+            setVotosConcejal(JSON.parse(JSON.stringify(votosIniciales)));
         }
     };
 
-    const totalVotosGobernador = votosGobernador.reduce((sum, v) => sum + v.cantidad, 0);
-    const totalVotosAsambleistaT = votosAsambleistaT.reduce((sum, v) => sum + v.cantidad, 0);
-    const totalVotosAsambleistaP = votosAsambleistaP.reduce((sum, v) => sum + v.cantidad, 0);
-    const totalGeneral = totalVotosGobernador + totalVotosAsambleistaT + totalVotosAsambleistaP + votosNulos + votosBlancos;
+    const totalVotosAlcalde = votosAlcalde.reduce((sum, v) => sum + (v.cantidad || 0), 0);
+    const totalVotosConcejal = votosConcejal.reduce((sum, v) => sum + (v.cantidad || 0), 0);
+    const totalGeneral = totalVotosAlcalde + totalVotosConcejal + (votosNulos || 0) + (votosBlancos || 0);
 
     const VotoCard = ({ frente, tipo }) => (
         <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all hover:border-[#F59E0B]">
@@ -327,7 +339,7 @@ const Transcripcion = () => {
                     value={frente.cantidad || ''}
                     onChange={(e) => {
                         const value = e.target.value.replace(/[^0-9]/g, '');
-                        updateVotos(tipo, frente.id_frente, parseInt(value) || 0);
+                        updateVotos(tipo, frente.id_frente, value === '' ? 0 : parseInt(value));
                     }}
                     className="w-20 text-center text-xl font-bold border border-gray-300 rounded-lg py-2 focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A] focus:outline-none"
                     placeholder="0"
@@ -587,7 +599,7 @@ const Transcripcion = () => {
                                                     <div>
                                                         <p className="font-semibold text-gray-900 group-hover:text-[#10B981]">Mesa {mesa.numero_mesa}</p>
                                                         <p className="text-xs text-gray-500 mt-1">{mesa.codigo}</p>
-                                                        {mesa.actas_registradas > 0 && (
+                                                        {parseInt(mesa.actas_registradas) > 0 && (
                                                             <p className="text-xs text-[#F59E0B] mt-2 font-medium">
                                                                 ⚠️ {mesa.actas_registradas} acta(s) registrada(s)
                                                             </p>
@@ -629,50 +641,34 @@ const Transcripcion = () => {
                                         </div>
                                     </div>
 
-                                    {/* Votos Gobernador */}
+                                    {/* Votos Alcalde */}
                                     <div className="mb-6">
                                         <div className="flex items-center gap-2 mb-3">
                                             <div className="w-1 h-6 bg-[#1E3A8A] rounded"></div>
-                                            <h3 className="font-semibold text-gray-900">Votos para Gobernador(a)</h3>
+                                            <h3 className="font-semibold text-gray-900">Votos para Alcalde</h3>
                                             <span className="text-xs text-gray-500 ml-auto">
-                                                Total: {totalVotosGobernador}
+                                                Total: {totalVotosAlcalde}
                                             </span>
                                         </div>
                                         <div className="space-y-2">
-                                            {votosGobernador.map(frente => (
-                                                <VotoCard key={`gob-${frente.id_frente}`} frente={frente} tipo="gobernador" />
+                                            {votosAlcalde.map(frente => (
+                                                <VotoCard key={`alc-${frente.id_frente}`} frente={frente} tipo="alcalde" />
                                             ))}
                                         </div>
                                     </div>
 
-                                    {/* Votos Asambleista por Territorio */}
+                                    {/* Votos Concejal */}
                                     <div className="mb-6">
                                         <div className="flex items-center gap-2 mb-3">
                                             <div className="w-1 h-6 bg-[#F59E0B] rounded"></div>
-                                            <h3 className="font-semibold text-gray-900">Votos para Asambleista por Territorio</h3>
+                                            <h3 className="font-semibold text-gray-900">Votos para Concejales</h3>
                                             <span className="text-xs text-gray-500 ml-auto">
-                                                Total: {totalVotosAsambleistaT}
+                                                Total: {totalVotosConcejal}
                                             </span>
                                         </div>
                                         <div className="space-y-2">
-                                            {votosAsambleistaT.map(frente => (
-                                                <VotoCard key={`ast-${frente.id_frente}`} frente={frente} tipo="asambleista_territorio" />
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Votos Asambleista por Población */}
-                                    <div className="mb-6">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <div className="w-1 h-6 bg-[#10B981] rounded"></div>
-                                            <h3 className="font-semibold text-gray-900">Votos para Asambleista por Población</h3>
-                                            <span className="text-xs text-gray-500 ml-auto">
-                                                Total: {totalVotosAsambleistaP}
-                                            </span>
-                                        </div>
-                                        <div className="space-y-2">
-                                            {votosAsambleistaP.map(frente => (
-                                                <VotoCard key={`asp-${frente.id_frente}`} frente={frente} tipo="asambleista_poblacion" />
+                                            {votosConcejal.map(frente => (
+                                                <VotoCard key={`con-${frente.id_frente}`} frente={frente} tipo="concejal" />
                                             ))}
                                         </div>
                                     </div>
@@ -689,7 +685,7 @@ const Transcripcion = () => {
                                                 value={votosNulos || ''}
                                                 onChange={(e) => {
                                                     const value = e.target.value.replace(/[^0-9]/g, '');
-                                                    setVotosNulos(parseInt(value) || 0);
+                                                    setVotosNulos(value === '' ? 0 : parseInt(value));
                                                 }}
                                                 className="w-full text-center text-xl font-bold border border-red-200 rounded-lg py-2 focus:border-red-600 focus:ring-1 focus:ring-red-600 focus:outline-none"
                                                 placeholder="0"
@@ -706,7 +702,7 @@ const Transcripcion = () => {
                                                 value={votosBlancos || ''}
                                                 onChange={(e) => {
                                                     const value = e.target.value.replace(/[^0-9]/g, '');
-                                                    setVotosBlancos(parseInt(value) || 0);
+                                                    setVotosBlancos(value === '' ? 0 : parseInt(value));
                                                 }}
                                                 className="w-full text-center text-xl font-bold border border-gray-200 rounded-lg py-2 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:outline-none"
                                                 placeholder="0"
@@ -788,9 +784,9 @@ const Transcripcion = () => {
 
                                     <button
                                         onClick={handleRegistrarActa}
-                                        disabled={isSaving || totalGeneral === 0}
+                                        disabled={isSaving}
                                         className={`w-full py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 transition ${
-                                            isSaving || totalGeneral === 0
+                                            isSaving
                                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                                 : 'bg-[#F59E0B] hover:bg-[#e68906] text-white shadow-lg hover:shadow-xl'
                                         }`}

@@ -35,6 +35,13 @@ const DashboardHome = () => {
     hour12: false
   });
 
+  const fecha = now.toLocaleDateString('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).replace(/^\w/, c => c.toUpperCase());
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
@@ -54,8 +61,13 @@ const DashboardHome = () => {
         <div className="mb-6">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Panel General</h1>
-              <p className="text-gray-600">Resumen rápido del sistema y accesos directos.</p>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-1 h-8 bg-gradient-to-b from-[#1E3A8A] to-[#F59E0B] rounded-full"></div>
+                <h1 className="text-3xl font-black text-gray-900">Panel General</h1>
+              </div>
+              <p className="text-gray-600 ml-4">
+                Resumen ejecutivo del sistema electoral y accesos directos
+              </p>
             </div>
             <div className="flex gap-3">
               {/* ✅ Si "Ver votos" NO existe, lo dejo deshabilitado */}
@@ -63,20 +75,23 @@ const DashboardHome = () => {
                 className="flex items-center gap-2 bg-gray-300 text-gray-500 px-6 py-2.5 rounded-lg font-medium cursor-not-allowed"
                 disabled
               >
-                <Vote className="w-5 h-5" />
-                Ver votos
+                <FileText className="w-5 h-5" />
+                Reportes
               </button>
 
               {/* ✅ Usuarios funciona */}
               <button
                 onClick={() => navigate('/dashboard/usuarios')}
-                className="flex items-center gap-2 bg-gray-200 text-gray-800 px-6 py-2.5 rounded-lg font-medium hover:bg-gray-300 transition"
+                className="flex items-center gap-2 bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white px-6 py-2.5 rounded-xl font-medium hover:from-[#152a63] hover:to-[#0f1f4a] transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
                 <Users className="w-5 h-5" />
-                Usuarios
+                Gestión de Usuarios
               </button>
             </div>
           </div>
+          
+          {/* Barra decorativa */}
+          <div className="w-32 h-1 bg-gradient-to-r from-[#1E3A8A] to-[#F59E0B] rounded-full mt-4 ml-4"></div>
         </div>
 
         {/* Tarjetas de estadísticas */}
@@ -86,7 +101,9 @@ const DashboardHome = () => {
             value="1"
             subtitle="Registrados"
             icon={<Users className="w-8 h-8" />}
-            bgColor="bg-[#E31E24]"
+            color="from-[#1E3A8A] to-[#152a63]"
+            lightColor="from-[#1E3A8A]/10 to-[#152a63]/10"
+            trend="+0%"
           />
 
           {/* ❌ ELIMINADO: Tarjeta ROLES */}
@@ -104,7 +121,9 @@ const DashboardHome = () => {
             value="0"
             subtitle="Registradas"
             icon={<Grid3x3 className="w-8 h-8" />}
-            bgColor="bg-yellow-500"
+            color="from-[#1E3A8A] to-[#152a63]"
+            lightColor="from-[#1E3A8A]/10 to-[#152a63]/10"
+            trend="Sin datos"
           />
         </div>
 
@@ -120,10 +139,11 @@ const DashboardHome = () => {
               <QuickAccessButton
                 icon={<Users className="w-6 h-6" />}
                 title="Usuarios"
-                subtitle="Gestionar cuentas"
-                bgColor="bg-pink-50"
-                iconColor="text-pink-600"
+                subtitle="Gestión de cuentas"
+                bgGradient="from-[#1E3A8A] to-[#152a63]"
+                iconBg="bg-white/20"
                 onClick={() => navigate('/dashboard/usuarios')}
+                active={true}
               />
 
               {/* ❌ ELIMINADO: Roles */}
@@ -132,10 +152,11 @@ const DashboardHome = () => {
               <QuickAccessButton
                 icon={<MapPin className="w-6 h-6" />}
                 title="Geográfico"
-                subtitle="Depto / provincia"
-                bgColor="bg-pink-50"
-                iconColor="text-pink-600"
+                subtitle="Distritos y recintos"
+                bgGradient="from-[#1E3A8A] to-[#152a63]"
+                iconBg="bg-white/20"
                 onClick={() => navigate('/dashboard/geografia')}
+                active={true}
               />
 
               {/* ✅ Mesas */}
@@ -187,6 +208,26 @@ const DashboardHome = () => {
                 iconColor="text-pink-600"
                 onClick={() => navigate('/dashboard/historial')}
               />
+              <QuickAccessButton 
+                icon={<BarChart3 className="w-6 h-6" />}
+                title="Resultados"
+                subtitle="En vivo"
+                bgGradient="from-[#1E3A8A] to-[#152a63]"
+                iconBg="bg-white/20"
+                onClick={() => navigate('/dashboard/resultados')}
+                active={true}
+              />
+            </div>
+
+            {/* Barra de progreso general */}
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-gray-600">Progreso del sistema</span>
+                <span className="text-xs font-bold text-[#1E3A8A]">2/6 módulos</span>
+              </div>
+              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-[#1E3A8A] to-[#F59E0B] rounded-full" style={{ width: '33%' }}></div>
+              </div>
             </div>
           </div>
 
@@ -196,29 +237,44 @@ const DashboardHome = () => {
             <p className="text-sm text-gray-600 mb-6">Estado del sistema</p>
 
             <div className="space-y-4 mb-6">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Fecha / hora</span>
-                <span className="text-sm font-semibold text-gray-900">{fechaHora}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Usuario</span>
-                <span className="text-sm font-semibold text-gray-900">{user.nombre_usuario}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Geográfico</span>
-                <span className="text-sm font-semibold text-gray-900">0</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Votos registrados</span>
-                <span className="text-sm font-semibold text-gray-900">0</span>
-              </div>
-              <div className="flex items-center gap-2 pt-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span className="text-xs font-semibold text-green-600">Activo</span>
-                <span className="ml-auto text-xs font-semibold text-yellow-600">Admin</span>
+              <InfoRow 
+                label="Fecha / hora" 
+                value={fechaHora}
+                icon={<Calendar className="w-4 h-4" />}
+                color="text-[#1E3A8A]"
+              />
+              <InfoRow 
+                label="Usuario" 
+                value={user.nombre_usuario}
+                icon={<UserCircle2 className="w-4 h-4" />}
+                color="text-[#F59E0B]"
+              />
+              <InfoRow 
+                label="Entidades geográficas" 
+                value="0"
+                icon={<MapPin className="w-4 h-4" />}
+                color="text-[#10B981]"
+              />
+              <InfoRow 
+                label="Votos registrados" 
+                value="0"
+                icon={<Vote className="w-4 h-4" />}
+                color="text-[#1E3A8A]"
+              />
+              
+              <div className="pt-2 flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-[#10B981] bg-opacity-10 px-3 py-2 rounded-lg">
+                  <CheckCircle className="w-4 h-4 text-[#10B981]" />
+                  <span className="text-xs font-semibold text-[#10B981]">Sistema Activo</span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#F59E0B] bg-opacity-10 px-3 py-2 rounded-lg">
+                  <Award className="w-4 h-4 text-[#F59E0B]" />
+                  <span className="text-xs font-semibold text-[#F59E0B]">{user.rol}</span>
+                </div>
               </div>
             </div>
 
+            {/* Acciones rápidas */}
             <div className="space-y-3">
               <button
                 onClick={() => navigate('/dashboard/geografia')}
@@ -246,16 +302,16 @@ const DashboardHome = () => {
           </div>
         </div>
 
-        {/* Últimos votos */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
+        {/* Últimas actividades */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Últimos votos</h2>
-              <p className="text-sm text-gray-600">Últimos registros (si aplica)</p>
+              <h2 className="text-lg font-bold text-[#1E3A8A]">Últimas Actividades</h2>
+              <p className="text-sm text-gray-500">Registro de movimientos recientes</p>
             </div>
             <button
               disabled
-              className="text-gray-400 font-medium text-sm cursor-not-allowed flex items-center gap-1"
+              className="text-[#1E3A8A] font-semibold text-sm hover:text-[#152a63] transition flex items-center gap-1 opacity-50 cursor-not-allowed"
             >
               Ver todo
               <ChevronRight className="w-4 h-4" />
@@ -279,8 +335,14 @@ const DashboardHome = () => {
               </thead>
               <tbody>
                 <tr>
-                  <td colSpan="3" className="text-center py-8 text-gray-400 text-sm">
-                    No hay votos registrados aún
+                  <td colSpan="4" className="text-center py-12">
+                    <div className="flex flex-col items-center">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <AlertCircle className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-gray-600 font-medium">No hay actividades recientes</p>
+                      <p className="text-sm text-gray-400 mt-1">Las acciones se mostrarán aquí cuando ocurran</p>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -304,6 +366,18 @@ const StatCard = ({ title, value, subtitle, icon, bgColor }) => (
         <h3 className="text-3xl font-bold text-gray-900 mb-1">{value}</h3>
         <p className="text-sm text-gray-500">{subtitle}</p>
       </div>
+      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+        trend === '+0%' ? 'bg-[#10B981] bg-opacity-10 text-[#10B981]' :
+        trend === 'Completado' ? 'bg-[#10B981] bg-opacity-10 text-[#10B981]' :
+        'bg-[#F59E0B] bg-opacity-10 text-[#F59E0B]'
+      }`}>
+        {trend}
+      </span>
+    </div>
+    <div className="mt-4">
+      <h3 className="text-sm font-semibold text-gray-600 mb-1">{title}</h3>
+      <p className="text-3xl font-black text-gray-900 mb-1">{value}</p>
+      <p className="text-xs text-gray-500">{subtitle}</p>
     </div>
   </div>
 );
@@ -325,7 +399,7 @@ const QuickAccessButton = ({ icon, title, subtitle, bgColor, iconColor, onClick,
       <h3 className="text-sm font-semibold text-gray-900 mb-0.5">{title}</h3>
       <p className="text-xs text-gray-500">{subtitle}</p>
     </div>
-    <ChevronRight className={`w-4 h-4 mt-1 flex-shrink-0 ${disabled ? 'text-gray-300' : 'text-gray-400 group-hover:text-gray-600'}`} />
+    <ChevronRight className="w-4 h-4 text-white/80 group-hover:translate-x-1 transition-transform" />
   </button>
 );
 
