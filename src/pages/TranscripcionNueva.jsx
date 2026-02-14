@@ -4,7 +4,6 @@ import {
     Plus,
     CheckCircle,
     ClipboardCheck,
-    ShieldCheck,
     X,
     MapPin,
     Building2,
@@ -16,14 +15,8 @@ import {
     Upload,
     AlertCircle,
     ChevronLeft,
-    Home,
-    School,
-    Users,
     Vote,
-    Camera,
-    FileCheck,
-    Clock,
-    BarChart3
+    Camera
 } from 'lucide-react';
 
 const Transcripcion = () => {
@@ -52,8 +45,9 @@ const Transcripcion = () => {
     const [selectedMesa, setSelectedMesa] = useState(null);
 
     // Votos
-    const [votosAlcalde, setVotosAlcalde] = useState([]);
-    const [votosConcejal, setVotosConcejal] = useState([]);
+    const [votosGobernador, setVotosGobernador] = useState([]);
+    const [votosAsambleistaT, setVotosAsambleistaT] = useState([]);
+    const [votosAsambleistaP, setVotosAsambleistaP] = useState([]);
     const [votosNulos, setVotosNulos] = useState(0);
     const [votosBlancos, setVotosBlancos] = useState(0);
     const [observaciones, setObservaciones] = useState('');
@@ -82,12 +76,11 @@ const Transcripcion = () => {
             const data = await response.json();
             
             if (data.success) {
-                // Filtrar por tipos que pueden ser distritos (País, Ciudad, Municipio, Distrito)
+                // Filtrar por tipos que pueden ser distritos
                 const distritosData = data.data.filter(g => 
                     ['País', 'Ciudad', 'Municipio', 'Distrito'].includes(g.tipo)
                 );
                 
-                // Si no hay con esos tipos, mostrar todos como fallback
                 if (distritosData.length === 0) {
                     setDistritos(data.data);
                 } else {
@@ -163,8 +156,9 @@ const Transcripcion = () => {
                     color: f.color,
                     cantidad: 0
                 }));
-                setVotosAlcalde(votosIniciales);
-                setVotosConcejal(JSON.parse(JSON.stringify(votosIniciales)));
+                setVotosGobernador(votosIniciales);
+                setVotosAsambleistaT(JSON.parse(JSON.stringify(votosIniciales)));
+                setVotosAsambleistaP(JSON.parse(JSON.stringify(votosIniciales)));
             }
         } catch (error) {
             console.error('Error al cargar frentes:', error);
@@ -202,7 +196,9 @@ const Transcripcion = () => {
     };
 
     const updateVotos = (tipo, idFrente, value) => {
-        const setVotos = tipo === 'alcalde' ? setVotosAlcalde : setVotosConcejal;
+        const setVotos = tipo === 'gobernador' ? setVotosGobernador : 
+                         tipo === 'asambleista_territorio' ? setVotosAsambleistaT : 
+                         setVotosAsambleistaP;
         setVotos(prev => prev.map(v =>
             v.id_frente === idFrente ? { ...v, cantidad: Math.max(0, value) } : v
         ));
@@ -247,8 +243,9 @@ const Transcripcion = () => {
             formData.append('votos_nulos', votosNulos);
             formData.append('votos_blancos', votosBlancos);
             formData.append('observaciones', observaciones);
-            formData.append('votos_alcalde', JSON.stringify(votosAlcalde.filter(v => v.cantidad > 0)));
-            formData.append('votos_concejal', JSON.stringify(votosConcejal.filter(v => v.cantidad > 0)));
+            formData.append('votos_gobernador', JSON.stringify(votosGobernador.filter(v => v.cantidad > 0)));
+            formData.append('votos_asambleista_territorio', JSON.stringify(votosAsambleistaT.filter(v => v.cantidad > 0)));
+            formData.append('votos_asambleista_poblacion', JSON.stringify(votosAsambleistaP.filter(v => v.cantidad > 0)));
             
             if (imagenActa) {
                 formData.append('imagen_acta', imagenActa);
@@ -300,17 +297,19 @@ const Transcripcion = () => {
                 color: f.color,
                 cantidad: 0
             }));
-            setVotosAlcalde(votosIniciales);
-            setVotosConcejal(votosIniciales);
+            setVotosGobernador(votosIniciales);
+            setVotosAsambleistaT(votosIniciales);
+            setVotosAsambleistaP(votosIniciales);
         }
     };
 
-    const totalVotosAlcalde = votosAlcalde.reduce((sum, v) => sum + v.cantidad, 0);
-    const totalVotosConcejal = votosConcejal.reduce((sum, v) => sum + v.cantidad, 0);
-    const totalGeneral = totalVotosAlcalde + totalVotosConcejal + votosNulos + votosBlancos;
+    const totalVotosGobernador = votosGobernador.reduce((sum, v) => sum + v.cantidad, 0);
+    const totalVotosAsambleistaT = votosAsambleistaT.reduce((sum, v) => sum + v.cantidad, 0);
+    const totalVotosAsambleistaP = votosAsambleistaP.reduce((sum, v) => sum + v.cantidad, 0);
+    const totalGeneral = totalVotosGobernador + totalVotosAsambleistaT + totalVotosAsambleistaP + votosNulos + votosBlancos;
 
     const VotoCard = ({ frente, tipo }) => (
-        <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all hover:border-indigo-300">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all hover:border-[#F59E0B]">
             <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div 
@@ -330,7 +329,7 @@ const Transcripcion = () => {
                         const value = e.target.value.replace(/[^0-9]/g, '');
                         updateVotos(tipo, frente.id_frente, parseInt(value) || 0);
                     }}
-                    className="w-20 text-center text-xl font-bold border border-gray-300 rounded-lg py-2 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 focus:outline-none"
+                    className="w-20 text-center text-xl font-bold border border-gray-300 rounded-lg py-2 focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A] focus:outline-none"
                     placeholder="0"
                 />
             </div>
@@ -338,25 +337,25 @@ const Transcripcion = () => {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
             {/* Header */}
-            <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+            <div className="bg-gradient-to-r from-[#1E3A8A] to-[#152a63] border-b border-gray-200 sticky top-0 z-10 shadow-md">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-20">
                         <div className="flex items-center gap-4">
-                            <div className="p-2.5 bg-indigo-50 rounded-xl">
-                                <FileText className="w-6 h-6 text-indigo-600" />
+                            <div className="p-2.5 bg-white/10 rounded-xl">
+                                <FileText className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold text-gray-900">Transcripción de Actas</h1>
-                                <p className="text-sm text-gray-500">Registro electoral en tiempo real</p>
+                                <h1 className="text-xl font-bold text-white">Transcripción de Actas</h1>
+                                <p className="text-sm text-white/70">Registro electoral en tiempo real</p>
                             </div>
                         </div>
                         
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => setShowModal(true)}
-                                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+                                className="flex items-center gap-2 bg-[#F59E0B] hover:bg-[#e68906] text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
                             >
                                 <Plus className="w-5 h-5" />
                                 Nueva Acta
@@ -367,57 +366,47 @@ const Transcripcion = () => {
             </div>
 
             {/* Contenido principal */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    {/* Tarjetas de estadísticas */}
-                    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-indigo-50 rounded-lg">
-                                <FileCheck className="w-6 h-6 text-indigo-600" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500">Actas Registradas</p>
-                                <p className="text-2xl font-bold text-gray-900">0</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-green-50 rounded-lg">
-                                <Users className="w-6 h-6 text-green-600" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500">Votos Válidos</p>
-                                <p className="text-2xl font-bold text-gray-900">0</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-amber-50 rounded-lg">
-                                <BarChart3 className="w-6 h-6 text-amber-600" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500">Participación</p>
-                                <p className="text-2xl font-bold text-gray-900">0%</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 {/* Mensaje de bienvenida */}
-                <div className="bg-gradient-to-br from-indigo-50 to-white rounded-2xl border border-indigo-100 p-8 text-center">
-                    <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <ClipboardCheck className="w-8 h-8 text-indigo-600" />
+                <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200 p-12 text-center shadow-sm">
+                    <div className="w-20 h-20 bg-gradient-to-br from-[#1E3A8A] to-[#152a63] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                        <ClipboardCheck className="w-10 h-10 text-white" />
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-2">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-3">
                         Sistema de Transcripción de Actas
                     </h2>
-                    <p className="text-gray-600 max-w-md mx-auto">
+                    <p className="text-gray-600 max-w-md mx-auto mb-8">
                         Selecciona "Nueva Acta" para comenzar el registro de resultados electorales
                     </p>
+                    <div className="flex justify-center gap-8">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-[#1E3A8A] bg-opacity-10 rounded-full flex items-center justify-center">
+                                <MapPin className="w-5 h-5 text-[#1E3A8A]" />
+                            </div>
+                            <div className="text-left">
+                                <p className="text-xs text-gray-500">Paso 1</p>
+                                <p className="font-semibold text-gray-900">Distrito</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-[#F59E0B] bg-opacity-10 rounded-full flex items-center justify-center">
+                                <Building2 className="w-5 h-5 text-[#F59E0B]" />
+                            </div>
+                            <div className="text-left">
+                                <p className="text-xs text-gray-500">Paso 2</p>
+                                <p className="font-semibold text-gray-900">Recinto</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-[#10B981] bg-opacity-10 rounded-full flex items-center justify-center">
+                                <Grid3x3 className="w-5 h-5 text-[#10B981]" />
+                            </div>
+                            <div className="text-left">
+                                <p className="text-xs text-gray-500">Paso 3</p>
+                                <p className="font-semibold text-gray-900">Mesa</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -427,21 +416,21 @@ const Transcripcion = () => {
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8">
                         
                         {/* Header del Modal */}
-                        <div className="sticky top-0 bg-white z-10 px-6 py-4 border-b border-gray-200 rounded-t-xl">
+                        <div className="sticky top-0 bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white z-10 px-6 py-4 rounded-t-xl">
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-lg font-bold text-gray-900">Registro de Acta Electoral</h2>
+                                <h2 className="text-lg font-bold">Registro de Acta Electoral</h2>
                                 <button
                                     onClick={() => {
                                         setShowModal(false);
                                         resetForm();
                                     }}
-                                    className="p-2 hover:bg-gray-100 rounded-lg transition"
+                                    className="p-2 hover:bg-white/10 rounded-lg transition"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
                             
-                            {/* Stepper simplificado */}
+                            {/* Stepper */}
                             <div className="flex items-center">
                                 {[
                                     { num: 1, label: 'Distrito', icon: MapPin },
@@ -453,20 +442,20 @@ const Transcripcion = () => {
                                         <div className="flex items-center">
                                             <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
                                                 currentStep >= step.num 
-                                                    ? 'bg-indigo-600 text-white' 
-                                                    : 'bg-gray-200 text-gray-500'
+                                                    ? 'bg-[#F59E0B] text-white' 
+                                                    : 'bg-white/20 text-white'
                                             }`}>
                                                 {currentStep > step.num ? <CheckCircle className="w-4 h-4" /> : step.num}
                                             </div>
                                             <span className={`ml-2 text-sm font-medium ${
-                                                currentStep >= step.num ? 'text-gray-900' : 'text-gray-400'
+                                                currentStep >= step.num ? 'text-white' : 'text-white/60'
                                             }`}>
                                                 {step.label}
                                             </span>
                                         </div>
                                         {idx < 3 && (
                                             <div className={`w-12 h-0.5 mx-3 ${
-                                                currentStep > step.num ? 'bg-indigo-600' : 'bg-gray-200'
+                                                currentStep > step.num ? 'bg-[#F59E0B]' : 'bg-white/20'
                                             }`} />
                                         )}
                                     </React.Fragment>
@@ -483,7 +472,7 @@ const Transcripcion = () => {
                                     
                                     {loading.distritos ? (
                                         <div className="flex items-center justify-center py-12">
-                                            <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                                            <div className="w-8 h-8 border-4 border-[#1E3A8A] border-t-transparent rounded-full animate-spin"></div>
                                         </div>
                                     ) : distritos.length === 0 ? (
                                         <div className="text-center py-12 bg-gray-50 rounded-xl">
@@ -496,14 +485,14 @@ const Transcripcion = () => {
                                                 <button
                                                     key={distrito.id_geografico}
                                                     onClick={() => handleSelectDistrito(distrito)}
-                                                    className="p-4 border border-gray-200 rounded-xl hover:border-indigo-600 hover:bg-indigo-50 transition-all text-left group"
+                                                    className="p-4 border border-gray-200 rounded-xl hover:border-[#1E3A8A] hover:bg-[#1E3A8A] hover:bg-opacity-5 transition-all text-left group"
                                                 >
                                                     <div className="flex items-center justify-between">
                                                         <div>
-                                                            <p className="font-semibold text-gray-900">{distrito.nombre}</p>
+                                                            <p className="font-semibold text-gray-900 group-hover:text-[#1E3A8A]">{distrito.nombre}</p>
                                                             <p className="text-xs text-gray-500 mt-0.5">{distrito.tipo}</p>
                                                         </div>
-                                                        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-600" />
+                                                        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#1E3A8A]" />
                                                     </div>
                                                 </button>
                                             ))}
@@ -517,7 +506,7 @@ const Transcripcion = () => {
                                 <div>
                                     <button
                                         onClick={() => setCurrentStep(1)}
-                                        className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium text-sm mb-4"
+                                        className="flex items-center gap-2 text-[#1E3A8A] hover:text-[#152a63] font-medium text-sm mb-4"
                                     >
                                         <ChevronLeft className="w-4 h-4" />
                                         Volver
@@ -525,12 +514,12 @@ const Transcripcion = () => {
                                     
                                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Selecciona el Recinto</h3>
                                     <p className="text-sm text-gray-500 mb-4">
-                                        Distrito: <span className="font-medium text-gray-900">{selectedDistrito?.nombre}</span>
+                                        Distrito: <span className="font-medium text-[#1E3A8A]">{selectedDistrito?.nombre}</span>
                                     </p>
                                     
                                     {loading.recintos ? (
                                         <div className="flex items-center justify-center py-12">
-                                            <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                                            <div className="w-8 h-8 border-4 border-[#1E3A8A] border-t-transparent rounded-full animate-spin"></div>
                                         </div>
                                     ) : recintos.length === 0 ? (
                                         <div className="text-center py-12 bg-gray-50 rounded-xl">
@@ -543,17 +532,17 @@ const Transcripcion = () => {
                                                 <button
                                                     key={recinto.id_recinto}
                                                     onClick={() => handleSelectRecinto(recinto)}
-                                                    className="w-full p-4 border border-gray-200 rounded-xl hover:border-indigo-600 hover:bg-indigo-50 transition-all text-left group"
+                                                    className="w-full p-4 border border-gray-200 rounded-xl hover:border-[#F59E0B] hover:bg-[#F59E0B] hover:bg-opacity-5 transition-all text-left group"
                                                 >
                                                     <div className="flex items-center justify-between">
                                                         <div>
-                                                            <p className="font-semibold text-gray-900">{recinto.nombre}</p>
+                                                            <p className="font-semibold text-gray-900 group-hover:text-[#F59E0B]">{recinto.nombre}</p>
                                                             <p className="text-sm text-gray-500 mt-1">{recinto.direccion}</p>
                                                             <p className="text-xs text-gray-400 mt-1">
                                                                 {recinto.cantidad_mesas} mesas disponibles
                                                             </p>
                                                         </div>
-                                                        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-600" />
+                                                        <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#F59E0B]" />
                                                     </div>
                                                 </button>
                                             ))}
@@ -567,7 +556,7 @@ const Transcripcion = () => {
                                 <div>
                                     <button
                                         onClick={() => setCurrentStep(2)}
-                                        className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium text-sm mb-4"
+                                        className="flex items-center gap-2 text-[#1E3A8A] hover:text-[#152a63] font-medium text-sm mb-4"
                                     >
                                         <ChevronLeft className="w-4 h-4" />
                                         Volver
@@ -575,12 +564,12 @@ const Transcripcion = () => {
                                     
                                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Selecciona la Mesa</h3>
                                     <p className="text-sm text-gray-500 mb-4">
-                                        Recinto: <span className="font-medium text-gray-900">{selectedRecinto?.nombre}</span>
+                                        Recinto: <span className="font-medium text-[#F59E0B]">{selectedRecinto?.nombre}</span>
                                     </p>
                                     
                                     {loading.mesas ? (
                                         <div className="flex items-center justify-center py-12">
-                                            <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                                            <div className="w-8 h-8 border-4 border-[#1E3A8A] border-t-transparent rounded-full animate-spin"></div>
                                         </div>
                                     ) : mesas.length === 0 ? (
                                         <div className="text-center py-12 bg-gray-50 rounded-xl">
@@ -593,13 +582,13 @@ const Transcripcion = () => {
                                                 <button
                                                     key={mesa.id_mesa}
                                                     onClick={() => handleSelectMesa(mesa)}
-                                                    className="p-4 border border-gray-200 rounded-xl hover:border-indigo-600 hover:bg-indigo-50 transition-all text-left"
+                                                    className="p-4 border border-gray-200 rounded-xl hover:border-[#10B981] hover:bg-[#10B981] hover:bg-opacity-5 transition-all text-left group"
                                                 >
                                                     <div>
-                                                        <p className="font-semibold text-gray-900">Mesa {mesa.numero_mesa}</p>
+                                                        <p className="font-semibold text-gray-900 group-hover:text-[#10B981]">Mesa {mesa.numero_mesa}</p>
                                                         <p className="text-xs text-gray-500 mt-1">{mesa.codigo}</p>
                                                         {mesa.actas_registradas > 0 && (
-                                                            <p className="text-xs text-amber-600 mt-2 font-medium">
+                                                            <p className="text-xs text-[#F59E0B] mt-2 font-medium">
                                                                 ⚠️ {mesa.actas_registradas} acta(s) registrada(s)
                                                             </p>
                                                         )}
@@ -616,58 +605,74 @@ const Transcripcion = () => {
                                 <div>
                                     <button
                                         onClick={() => setCurrentStep(3)}
-                                        className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium text-sm mb-4"
+                                        className="flex items-center gap-2 text-[#1E3A8A] hover:text-[#152a63] font-medium text-sm mb-4"
                                     >
                                         <ChevronLeft className="w-4 h-4" />
                                         Volver
                                     </button>
                                     
                                     {/* Resumen de selección */}
-                                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-6">
+                                    <div className="bg-gradient-to-r from-[#1E3A8A] to-[#152a63] rounded-xl p-4 mb-6 text-white">
                                         <div className="grid grid-cols-3 gap-4 text-sm">
                                             <div>
-                                                <p className="text-indigo-600 text-xs font-medium mb-1">Distrito</p>
-                                                <p className="text-gray-900 font-semibold">{selectedDistrito?.nombre}</p>
+                                                <p className="text-white/70 text-xs font-medium mb-1">Distrito</p>
+                                                <p className="font-semibold">{selectedDistrito?.nombre}</p>
                                             </div>
                                             <div>
-                                                <p className="text-indigo-600 text-xs font-medium mb-1">Recinto</p>
-                                                <p className="text-gray-900 font-semibold">{selectedRecinto?.nombre}</p>
+                                                <p className="text-white/70 text-xs font-medium mb-1">Recinto</p>
+                                                <p className="font-semibold">{selectedRecinto?.nombre}</p>
                                             </div>
                                             <div>
-                                                <p className="text-indigo-600 text-xs font-medium mb-1">Mesa</p>
-                                                <p className="text-gray-900 font-semibold">Mesa {selectedMesa?.numero_mesa}</p>
+                                                <p className="text-white/70 text-xs font-medium mb-1">Mesa</p>
+                                                <p className="font-semibold">Mesa {selectedMesa?.numero_mesa}</p>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Votos Alcalde */}
+                                    {/* Votos Gobernador */}
                                     <div className="mb-6">
                                         <div className="flex items-center gap-2 mb-3">
-                                            <div className="w-1 h-6 bg-indigo-600 rounded"></div>
-                                            <h3 className="font-semibold text-gray-900">Votos para Alcalde</h3>
+                                            <div className="w-1 h-6 bg-[#1E3A8A] rounded"></div>
+                                            <h3 className="font-semibold text-gray-900">Votos para Gobernador(a)</h3>
                                             <span className="text-xs text-gray-500 ml-auto">
-                                                Total: {totalVotosAlcalde}
+                                                Total: {totalVotosGobernador}
                                             </span>
                                         </div>
                                         <div className="space-y-2">
-                                            {votosAlcalde.map(frente => (
-                                                <VotoCard key={`alc-${frente.id_frente}`} frente={frente} tipo="alcalde" />
+                                            {votosGobernador.map(frente => (
+                                                <VotoCard key={`gob-${frente.id_frente}`} frente={frente} tipo="gobernador" />
                                             ))}
                                         </div>
                                     </div>
 
-                                    {/* Votos Concejal */}
+                                    {/* Votos Asambleista por Territorio */}
                                     <div className="mb-6">
                                         <div className="flex items-center gap-2 mb-3">
-                                            <div className="w-1 h-6 bg-emerald-600 rounded"></div>
-                                            <h3 className="font-semibold text-gray-900">Votos para Concejales</h3>
+                                            <div className="w-1 h-6 bg-[#F59E0B] rounded"></div>
+                                            <h3 className="font-semibold text-gray-900">Votos para Asambleista por Territorio</h3>
                                             <span className="text-xs text-gray-500 ml-auto">
-                                                Total: {totalVotosConcejal}
+                                                Total: {totalVotosAsambleistaT}
                                             </span>
                                         </div>
                                         <div className="space-y-2">
-                                            {votosConcejal.map(frente => (
-                                                <VotoCard key={`con-${frente.id_frente}`} frente={frente} tipo="concejal" />
+                                            {votosAsambleistaT.map(frente => (
+                                                <VotoCard key={`ast-${frente.id_frente}`} frente={frente} tipo="asambleista_territorio" />
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Votos Asambleista por Población */}
+                                    <div className="mb-6">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className="w-1 h-6 bg-[#10B981] rounded"></div>
+                                            <h3 className="font-semibold text-gray-900">Votos para Asambleista por Población</h3>
+                                            <span className="text-xs text-gray-500 ml-auto">
+                                                Total: {totalVotosAsambleistaP}
+                                            </span>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {votosAsambleistaP.map(frente => (
+                                                <VotoCard key={`asp-${frente.id_frente}`} frente={frente} tipo="asambleista_poblacion" />
                                             ))}
                                         </div>
                                     </div>
@@ -717,7 +722,7 @@ const Transcripcion = () => {
                                         <textarea
                                             value={observaciones}
                                             onChange={(e) => setObservaciones(e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 focus:outline-none"
+                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A] focus:outline-none"
                                             rows="2"
                                             placeholder="Observaciones adicionales..."
                                         />
@@ -727,13 +732,13 @@ const Transcripcion = () => {
                                     <div className="mb-6">
                                         <label className="block text-xs font-medium text-gray-700 mb-2">
                                             <div className="flex items-center gap-2">
-                                                <Camera className="w-4 h-4" />
+                                                <Camera className="w-4 h-4 text-[#1E3A8A]" />
                                                 Imagen del Acta
                                             </div>
                                         </label>
                                         
                                         {!previewImagen ? (
-                                            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-600 hover:bg-indigo-50 transition">
+                                            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-[#1E3A8A] hover:bg-[#1E3A8A] hover:bg-opacity-5 transition">
                                                 <div className="flex flex-col items-center">
                                                     <Upload className="w-6 h-6 mb-1 text-gray-400" />
                                                     <p className="text-xs text-gray-600">Click para subir</p>
@@ -774,7 +779,7 @@ const Transcripcion = () => {
                                     </div>
 
                                     {/* Total y Botón */}
-                                    <div className="bg-indigo-600 rounded-xl p-4 text-white mb-4">
+                                    <div className="bg-gradient-to-r from-[#1E3A8A] to-[#152a63] rounded-xl p-4 text-white mb-4">
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-medium opacity-90">Total de Votos</span>
                                             <span className="text-2xl font-bold">{totalGeneral}</span>
@@ -787,7 +792,7 @@ const Transcripcion = () => {
                                         className={`w-full py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 transition ${
                                             isSaving || totalGeneral === 0
                                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg hover:shadow-xl'
+                                                : 'bg-[#F59E0B] hover:bg-[#e68906] text-white shadow-lg hover:shadow-xl'
                                         }`}
                                     >
                                         {isSaving ? (

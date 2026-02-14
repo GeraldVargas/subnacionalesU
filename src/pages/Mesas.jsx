@@ -66,7 +66,12 @@ const Mesas = () => {
 
   const cargarDistritos = async () => {
     try {
-      const response = await fetch(`${API_URL}/geografico`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/geografico`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const data = await response.json();
       if (data.success) {
         const distritosData = data.data.filter(g =>

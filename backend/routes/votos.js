@@ -59,7 +59,7 @@ router.get('/', async (req, res) => {
             FROM acta a
             INNER JOIN mesa m ON a.id_mesa = m.id_mesa
             LEFT JOIN recinto r ON m.id_recinto = r.id_recinto
-            LEFT JOIN geografico g ON m.id_geografico = g.id_geografico
+            LEFT JOIN geografico g ON r.id_geografico = g.id_geografico
             LEFT JOIN usuario u ON a.id_usuario = u.id_usuario
             LEFT JOIN tipo_eleccion te ON a.id_tipo_eleccion = te.id_tipo_eleccion
             ORDER BY a.fecha_registro DESC
@@ -434,16 +434,20 @@ router.post('/registrar-acta', verificarToken, uploadActa.single('imagen_acta'),
         votos_nulos,
         votos_blancos,
         observaciones,
-        votos_alcalde,
-        votos_concejal
+        votos_gobernador,
+        votos_asambleista_territorio,
+        votos_asambleista_poblacion
     } = req.body;
     
     // Parsear JSON strings si vienen de FormData
-    if (typeof votos_alcalde === 'string') {
-        votos_alcalde = JSON.parse(votos_alcalde);
+    if (typeof votos_gobernador === 'string') {
+        votos_gobernador = JSON.parse(votos_gobernador);
     }
-    if (typeof votos_concejal === 'string') {
-        votos_concejal = JSON.parse(votos_concejal);
+    if (typeof votos_asambleista_territorio === 'string') {
+        votos_asambleista_territorio = JSON.parse(votos_asambleista_territorio);
+    }
+    if (typeof votos_asambleista_poblacion === 'string') {
+        votos_asambleista_poblacion = JSON.parse(votos_asambleista_poblacion);
     }
 
     // Obtener id_usuario del token JWT decodificado
@@ -463,9 +467,10 @@ router.post('/registrar-acta', verificarToken, uploadActa.single('imagen_acta'),
         }
 
         // Calcular totales
-        const votosValidosAlcalde = votos_alcalde?.reduce((sum, v) => sum + (v.cantidad || 0), 0) || 0;
-        const votosValidosConcejal = votos_concejal?.reduce((sum, v) => sum + (v.cantidad || 0), 0) || 0;
-        const votosValidos = votosValidosAlcalde + votosValidosConcejal;
+        const votosValidosGobernador = votos_gobernador?.reduce((sum, v) => sum + (v.cantidad || 0), 0) || 0;
+        const votosValidosAsambleistaT = votos_asambleista_territorio?.reduce((sum, v) => sum + (v.cantidad || 0), 0) || 0;
+        const votosValidosAsambleistaP = votos_asambleista_poblacion?.reduce((sum, v) => sum + (v.cantidad || 0), 0) || 0;
+        const votosValidos = votosValidosGobernador + votosValidosAsambleistaT + votosValidosAsambleistaP;
         const votosTotales = votosValidos + (votos_nulos || 0) + (votos_blancos || 0);
 
         // Insertar acta
@@ -499,26 +504,38 @@ router.post('/registrar-acta', verificarToken, uploadActa.single('imagen_acta'),
 
         const id_acta = actaResult.rows[0].id_acta;
 
-        // Insertar votos de alcalde
-        if (votos_alcalde && votos_alcalde.length > 0) {
-            for (const voto of votos_alcalde) {
+        // Insertar votos de gobernador
+        if (votos_gobernador && votos_gobernador.length > 0) {
+            for (const voto of votos_gobernador) {
                 if (voto.cantidad > 0) {
                     await client.query(`
                         INSERT INTO voto (id_acta, id_frente, cantidad, tipo_cargo)
                         VALUES ($1, $2, $3, $4)
-                    `, [id_acta, voto.id_frente, voto.cantidad, 'alcalde']);
+                    `, [id_acta, voto.id_frente, voto.cantidad, 'gobernador']);
                 }
             }
         }
 
-        // Insertar votos de concejal
-        if (votos_concejal && votos_concejal.length > 0) {
-            for (const voto of votos_concejal) {
+        // Insertar votos de asambleista por territorio
+        if (votos_asambleista_territorio && votos_asambleista_territorio.length > 0) {
+            for (const voto of votos_asambleista_territorio) {
                 if (voto.cantidad > 0) {
                     await client.query(`
                         INSERT INTO voto (id_acta, id_frente, cantidad, tipo_cargo)
                         VALUES ($1, $2, $3, $4)
-                    `, [id_acta, voto.id_frente, voto.cantidad, 'concejal']);
+                    `, [id_acta, voto.id_frente, voto.cantidad, 'asambleista_territorio']);
+                }
+            }
+        }
+
+        // Insertar votos de asambleista por población
+        if (votos_asambleista_poblacion && votos_asambleista_poblacion.length > 0) {
+            for (const voto of votos_asambleista_poblacion) {
+                if (voto.cantidad > 0) {
+                    await client.query(`
+                        INSERT INTO voto (id_acta, id_frente, cantidad, tipo_cargo)
+                        VALUES ($1, $2, $3, $4)
+                    `, [id_acta, voto.id_frente, voto.cantidad, 'asambleista_poblacion']);
                 }
             }
         }
@@ -555,8 +572,9 @@ router.put('/acta/:id', verificarToken, async (req, res) => {
         votos_nulos,
         votos_blancos,
         observaciones,
-        votos_alcalde,
-        votos_concejal,
+        votos_gobernador,
+        votos_asambleista_territorio,
+        votos_asambleista_poblacion,
         estado
     } = req.body;
 
@@ -576,9 +594,10 @@ router.put('/acta/:id', verificarToken, async (req, res) => {
         }
 
         // Calcular totales
-        const votosValidosAlcalde = votos_alcalde?.reduce((sum, v) => sum + (v.cantidad || 0), 0) || 0;
-        const votosValidosConcejal = votos_concejal?.reduce((sum, v) => sum + (v.cantidad || 0), 0) || 0;
-        const votosValidos = votosValidosAlcalde + votosValidosConcejal;
+        const votosValidosGobernador = votos_gobernador?.reduce((sum, v) => sum + (v.cantidad || 0), 0) || 0;
+        const votosValidosAsambleistaT = votos_asambleista_territorio?.reduce((sum, v) => sum + (v.cantidad || 0), 0) || 0;
+        const votosValidosAsambleistaP = votos_asambleista_poblacion?.reduce((sum, v) => sum + (v.cantidad || 0), 0) || 0;
+        const votosValidos = votosValidosGobernador + votosValidosAsambleistaT + votosValidosAsambleistaP;
         const votosTotales = votosValidos + (votos_nulos || 0) + (votos_blancos || 0);
 
         // Actualizar el acta existente
@@ -606,26 +625,38 @@ router.put('/acta/:id', verificarToken, async (req, res) => {
         // Eliminar votos anteriores
         await client.query('DELETE FROM voto WHERE id_acta = $1', [id]);
 
-        // Insertar nuevos votos de alcalde
-        if (votos_alcalde && votos_alcalde.length > 0) {
-            for (const voto of votos_alcalde) {
+        // Insertar nuevos votos de gobernador
+        if (votos_gobernador && votos_gobernador.length > 0) {
+            for (const voto of votos_gobernador) {
                 if (voto.cantidad > 0) {
                     await client.query(`
                         INSERT INTO voto (id_acta, id_frente, cantidad, tipo_cargo)
                         VALUES ($1, $2, $3, $4)
-                    `, [id, voto.id_frente, voto.cantidad, 'alcalde']);
+                    `, [id, voto.id_frente, voto.cantidad, 'gobernador']);
                 }
             }
         }
 
-        // Insertar nuevos votos de concejal
-        if (votos_concejal && votos_concejal.length > 0) {
-            for (const voto of votos_concejal) {
+        // Insertar nuevos votos de asambleista por territorio
+        if (votos_asambleista_territorio && votos_asambleista_territorio.length > 0) {
+            for (const voto of votos_asambleista_territorio) {
                 if (voto.cantidad > 0) {
                     await client.query(`
                         INSERT INTO voto (id_acta, id_frente, cantidad, tipo_cargo)
                         VALUES ($1, $2, $3, $4)
-                    `, [id, voto.id_frente, voto.cantidad, 'concejal']);
+                    `, [id, voto.id_frente, voto.cantidad, 'asambleista_territorio']);
+                }
+            }
+        }
+
+        // Insertar nuevos votos de asambleista por población
+        if (votos_asambleista_poblacion && votos_asambleista_poblacion.length > 0) {
+            for (const voto of votos_asambleista_poblacion) {
+                if (voto.cantidad > 0) {
+                    await client.query(`
+                        INSERT INTO voto (id_acta, id_frente, cantidad, tipo_cargo)
+                        VALUES ($1, $2, $3, $4)
+                    `, [id, voto.id_frente, voto.cantidad, 'asambleista_poblacion']);
                 }
             }
         }
@@ -674,7 +705,7 @@ router.get('/acta/:id', async (req, res) => {
             FROM acta a
             INNER JOIN mesa m ON a.id_mesa = m.id_mesa
             LEFT JOIN recinto r ON m.id_recinto = r.id_recinto
-            LEFT JOIN geografico g ON m.id_geografico = g.id_geografico
+            LEFT JOIN geografico g ON r.id_geografico = g.id_geografico
             LEFT JOIN usuario u ON a.id_usuario = u.id_usuario
             LEFT JOIN tipo_eleccion te ON a.id_tipo_eleccion = te.id_tipo_eleccion
             WHERE a.id_acta = $1
@@ -732,8 +763,9 @@ router.get('/resultados-vivo', async (req, res) => {
                 f.siglas,
                 f.color,
                 SUM(v.cantidad) as total_votos,
-                SUM(CASE WHEN v.tipo_cargo = 'alcalde' THEN v.cantidad ELSE 0 END) as votos_alcalde,
-                SUM(CASE WHEN v.tipo_cargo = 'concejal' THEN v.cantidad ELSE 0 END) as votos_concejal,
+                SUM(CASE WHEN v.tipo_cargo = 'gobernador' THEN v.cantidad ELSE 0 END) as votos_gobernador,
+                SUM(CASE WHEN v.tipo_cargo = 'asambleista_territorio' THEN v.cantidad ELSE 0 END) as votos_asambleista_territorio,
+                SUM(CASE WHEN v.tipo_cargo = 'asambleista_poblacion' THEN v.cantidad ELSE 0 END) as votos_asambleista_poblacion,
                 COUNT(DISTINCT v.id_acta) as actas_con_votos
             FROM frente_politico f
             LEFT JOIN voto v ON f.id_frente = v.id_frente

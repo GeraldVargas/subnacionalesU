@@ -447,12 +447,20 @@ const Geografia = () => {
     };
 
     const getTipoColor = (tipo) => {
+        // Usando los colores de NGP para los diferentes tipos
         const colores = {
-            'País': 'bg-purple-100 text-purple-700 border-purple-200',
-            'Ciudad': 'bg-blue-100 text-blue-700 border-blue-200',
-            'Municipio': 'bg-green-100 text-green-700 border-green-200',
-            'Localidad': 'bg-amber-100 text-amber-700 border-amber-200',
-            'Recinto': 'bg-rose-100 text-rose-700 border-rose-200'
+            'País': 'bg-[#1E3A8A] bg-opacity-10 text-[#1E3A8A] border-[#1E3A8A] border-opacity-30',
+            'Ciudad': 'bg-[#F59E0B] bg-opacity-10 text-[#F59E0B] border-[#F59E0B] border-opacity-30',
+            'Municipio': 'bg-[#10B981] bg-opacity-10 text-[#10B981] border-[#10B981] border-opacity-30',
+            'Localidad': 'bg-[#8B5CF6] bg-opacity-10 text-[#8B5CF6] border-[#8B5CF6] border-opacity-30',
+            'Recinto': 'bg-[#EC4899] bg-opacity-10 text-[#EC4899] border-[#EC4899] border-opacity-30',
+            'Distrito': 'bg-[#3B82F6] bg-opacity-10 text-[#3B82F6] border-[#3B82F6] border-opacity-30',
+            'Provincia': 'bg-[#14B8A6] bg-opacity-10 text-[#14B8A6] border-[#14B8A6] border-opacity-30',
+            'Cantón': 'bg-[#F97316] bg-opacity-10 text-[#F97316] border-[#F97316] border-opacity-30',
+            'Comunidad': 'bg-[#8B5CF6] bg-opacity-10 text-[#8B5CF6] border-[#8B5CF6] border-opacity-30',
+            'Zona': 'bg-[#06B6D4] bg-opacity-10 text-[#06B6D4] border-[#06B6D4] border-opacity-30',
+            'Barrio': 'bg-[#D946EF] bg-opacity-10 text-[#D946EF] border-[#D946EF] border-opacity-30',
+            'Manzano': 'bg-[#64748B] bg-opacity-10 text-[#64748B] border-[#64748B] border-opacity-30'
         };
         return colores[tipo] || 'bg-gray-100 text-gray-700 border-gray-200';
     };
@@ -464,8 +472,8 @@ const Geografia = () => {
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
                 <div className="text-center">
                     <div className="relative">
-                        <div className="w-20 h-20 border-4 border-gray-200 border-t-[#E31E24] rounded-full animate-spin"></div>
-                        <Globe className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[#E31E24] w-8 h-8" />
+                        <div className="w-20 h-20 border-4 border-gray-200 border-t-[#1E3A8A] rounded-full animate-spin"></div>
+                        <Globe className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[#1E3A8A] w-8 h-8" />
                     </div>
                     <p className="mt-4 text-gray-600 font-medium">Cargando parámetros geográficos...</p>
                 </div>
@@ -478,8 +486,8 @@ const Geografia = () => {
             
             {/* Mensajes de notificación */}
             {error && (
-                <div className="fixed top-4 right-4 z-50 bg-white border-l-4 border-red-500 shadow-lg rounded-lg p-4 flex items-start gap-3 animate-slideIn">
-                    <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="fixed top-4 right-4 z-50 bg-white border-l-4 border-[#EF4444] shadow-lg rounded-lg p-4 flex items-start gap-3 animate-slideIn">
+                    <XCircle className="w-5 h-5 text-[#EF4444] flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-gray-700">{error}</p>
                     <button onClick={() => setError(null)} className="text-gray-400 hover:text-gray-600">
                         <X size={16} />
@@ -488,8 +496,8 @@ const Geografia = () => {
             )}
             
             {success && (
-                <div className="fixed top-4 right-4 z-50 bg-white border-l-4 border-green-500 shadow-lg rounded-lg p-4 flex items-start gap-3 animate-slideIn">
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                <div className="fixed top-4 right-4 z-50 bg-white border-l-4 border-[#10B981] shadow-lg rounded-lg p-4 flex items-start gap-3 animate-slideIn">
+                    <CheckCircle className="w-5 h-5 text-[#10B981] flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-gray-700">{success}</p>
                     <button onClick={() => setSuccess(null)} className="text-gray-400 hover:text-gray-600">
                         <X size={16} />
@@ -502,8 +510,8 @@ const Geografia = () => {
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 bg-[#E31E24] bg-opacity-10 rounded-xl flex items-center justify-center">
-                                <Globe className="w-6 h-6 text-[#E31E24]" />
+                            <div className="w-12 h-12 bg-[#1E3A8A] bg-opacity-10 rounded-xl flex items-center justify-center">
+                                <Globe className="w-6 h-6 text-[#1E3A8A]" />
                             </div>
                             <div>
                                 <h1 className="text-2xl font-bold text-gray-900">Parámetros Geográficos</h1>
@@ -517,7 +525,7 @@ const Geografia = () => {
                             {esAdmin && (
                                 <button
                                     onClick={abrirModalTipos}
-                                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all flex items-center gap-2"
+                                    className="px-4 py-2 border border-[#F59E0B] text-[#F59E0B] rounded-xl text-sm font-medium hover:bg-[#F59E0B] hover:text-white transition-all flex items-center gap-2"
                                 >
                                     <Layers size={18} />
                                     Gestionar Tipos
@@ -525,7 +533,7 @@ const Geografia = () => {
                             )}
                             <button
                                 onClick={() => abrirModal()}
-                                className="bg-gray-900 hover:bg-gray-800 text-white px-5 py-2 rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg transition-all transform hover:-translate-y-0.5"
+                                className="bg-[#1E3A8A] hover:bg-[#152a63] text-white px-5 py-2 rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg transition-all transform hover:-translate-y-0.5"
                             >
                                 <Plus size={18} />
                                 Nuevo Registro
@@ -537,21 +545,21 @@ const Geografia = () => {
                 {/* Panel de Filtros */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
                     <div 
-                        className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between cursor-pointer"
+                        className="p-4 bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white flex items-center justify-between cursor-pointer"
                         onClick={() => setMostrarFiltros(!mostrarFiltros)}
                     >
                         <div className="flex items-center gap-2">
-                            <Filter size={18} className="text-gray-500" />
-                            <span className="font-medium text-gray-700">Filtros y búsqueda</span>
+                            <Filter size={18} />
+                            <span className="font-medium">Filtros y búsqueda</span>
                         </div>
                         <ChevronDown 
                             size={18} 
-                            className={`text-gray-500 transition-transform ${mostrarFiltros ? 'rotate-180' : ''}`}
+                            className={`transition-transform ${mostrarFiltros ? 'rotate-180' : ''}`}
                         />
                     </div>
                     
                     {mostrarFiltros && (
-                        <div className="p-6 space-y-4">
+                        <div className="p-6 space-y-4 bg-white">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {/* Búsqueda */}
                                 <div>
@@ -564,7 +572,7 @@ const Geografia = () => {
                                             placeholder="Nombre o código..."
                                             value={busqueda}
                                             onChange={(e) => setBusqueda(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#E31E24] focus:border-transparent outline-none transition-all"
+                                            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent outline-none transition-all"
                                         />
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                     </div>
@@ -579,7 +587,7 @@ const Geografia = () => {
                                         <select
                                             value={filtroTipo}
                                             onChange={(e) => setFiltroTipo(e.target.value)}
-                                            className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#E31E24] focus:border-transparent outline-none appearance-none"
+                                            className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent outline-none appearance-none"
                                         >
                                             <option value="">Todos los tipos</option>
                                             {tiposDisponibles.map(tipo => (
@@ -599,7 +607,7 @@ const Geografia = () => {
                                         <select
                                             value={filtroPadre}
                                             onChange={(e) => setFiltroPadre(e.target.value)}
-                                            className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#E31E24] focus:border-transparent outline-none appearance-none"
+                                            className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent outline-none appearance-none"
                                         >
                                             <option value="">Todos los padres</option>
                                             <option value="sin_padre">Sin padre (nivel superior)</option>
@@ -619,7 +627,7 @@ const Geografia = () => {
                                 <div className="flex justify-end">
                                     <button
                                         onClick={limpiarFiltros}
-                                        className="text-sm text-[#E31E24] hover:text-[#B00000] font-medium flex items-center gap-1"
+                                        className="text-sm text-[#F59E0B] hover:text-[#e68906] font-medium flex items-center gap-1"
                                     >
                                         <X size={14} />
                                         Limpiar filtros
@@ -633,16 +641,16 @@ const Geografia = () => {
                 {/* Tabla de Registros */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                     {/* Cabecera de tabla */}
-                    <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                    <div className="px-6 py-4 bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-700">
+                            <span className="text-sm font-medium">
                                 Mostrando {registrosFiltrados.length} de {registros.length} registros
                             </span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <div className="flex items-center gap-2 text-xs text-white/80">
                             <RefreshCw 
                                 size={14} 
-                                className="cursor-pointer hover:text-[#E31E24] transition-colors" 
+                                className="cursor-pointer hover:text-white transition-colors" 
                                 onClick={() => {
                                     cargarRegistros();
                                     cargarPadres();
@@ -668,7 +676,7 @@ const Geografia = () => {
                                 {(busqueda || filtroTipo || filtroPadre) && (
                                     <button
                                         onClick={limpiarFiltros}
-                                        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition"
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#1E3A8A] text-white rounded-xl text-sm font-medium hover:bg-[#152a63] transition"
                                     >
                                         <X size={16} />
                                         Limpiar filtros
@@ -688,61 +696,65 @@ const Geografia = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {registrosFiltrados.map((reg, index) => (
-                                        <tr 
-                                            key={reg.id_geografico} 
-                                            className="hover:bg-gray-50 transition-colors group cursor-pointer"
-                                            onClick={() => abrirDetalle(reg)}
-                                        >
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-400 group-hover:text-[#E31E24]">
-                                                {index + 1}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <div>
-                                                        <div className="text-sm font-semibold text-gray-900">{reg.nombre}</div>
+                                    {registrosFiltrados.map((reg, index) => {
+                                        // Alternar colores de fondo en las filas para mejor legibilidad
+                                        const rowColor = index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50';
+                                        return (
+                                            <tr 
+                                                key={reg.id_geografico} 
+                                                className={`${rowColor} hover:bg-[#1E3A8A] hover:bg-opacity-5 transition-colors group cursor-pointer`}
+                                                onClick={() => abrirDetalle(reg)}
+                                            >
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-400 group-hover:text-[#1E3A8A]">
+                                                    {index + 1}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="flex items-center">
+                                                        <div>
+                                                            <div className="text-sm font-semibold text-gray-900 group-hover:text-[#1E3A8A]">{reg.nombre}</div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                {reg.codigo ? (
-                                                    <span className="text-sm text-gray-600 font-mono">{reg.codigo}</span>
-                                                ) : (
-                                                    <span className="text-sm text-gray-400">—</span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getTipoColor(reg.tipo)}`}>
-                                                    {reg.tipo}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="text-sm text-gray-600">
-                                                    {reg.nombre_padre || (
-                                                        <span className="text-gray-400">Sin padre</span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    {reg.codigo ? (
+                                                        <span className="text-sm text-gray-600 font-mono">{reg.codigo}</span>
+                                                    ) : (
+                                                        <span className="text-sm text-gray-400">—</span>
                                                     )}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => abrirModal(reg)}
-                                                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all"
-                                                        title="Editar"
-                                                    >
-                                                        <Edit size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleEliminar(reg.id_geografico, reg.nombre)}
-                                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                                        title="Eliminar"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getTipoColor(reg.tipo)}`}>
+                                                        {reg.tipo}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className="text-sm text-gray-600 group-hover:text-[#1E3A8A]">
+                                                        {reg.nombre_padre || (
+                                                            <span className="text-gray-400">Sin padre</span>
+                                                        )}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            onClick={() => abrirModal(reg)}
+                                                            className="p-2 text-gray-400 hover:text-[#F59E0B] hover:bg-[#F59E0B] hover:bg-opacity-10 rounded-lg transition-all"
+                                                            title="Editar"
+                                                        >
+                                                            <Edit size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleEliminar(reg.id_geografico, reg.nombre)}
+                                                            className="p-2 text-gray-400 hover:text-[#EF4444] hover:bg-[#EF4444] hover:bg-opacity-10 rounded-lg transition-all"
+                                                            title="Eliminar"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         )}
@@ -751,9 +763,9 @@ const Geografia = () => {
                     {/* Footer de tabla */}
                     {registrosFiltrados.length > 0 && (
                         <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                            <div className="flex items-center justify-between text-sm text-gray-500">
-                                <span>Total de registros: {registros.length}</span>
-                                <span>Página 1 de 1</span>
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-500">Total de registros: {registros.length}</span>
+                                <span className="text-[#1E3A8A] font-medium">Página 1 de 1</span>
                             </div>
                         </div>
                     )}
@@ -766,7 +778,7 @@ const Geografia = () => {
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
                         
                         {/* Header del modal */}
-                        <div className="bg-gray-900 text-white px-6 py-4 flex justify-between items-center">
+                        <div className="bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white px-6 py-4 flex justify-between items-center">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
                                     {modoEdicion ? <Edit size={18} /> : <Plus size={18} />}
@@ -797,7 +809,7 @@ const Geografia = () => {
                                 {/* Nombre */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Nombre <span className="text-red-500">*</span>
+                                        Nombre <span className="text-[#EF4444]">*</span>
                                     </label>
                                     <input
                                         type="text"
@@ -805,7 +817,7 @@ const Geografia = () => {
                                         value={nuevoRegistro.nombre}
                                         onChange={handleInputChange}
                                         required
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#E31E24] focus:border-transparent outline-none transition"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent outline-none transition"
                                         placeholder="Ej: Cercado"
                                     />
                                 </div>
@@ -820,7 +832,7 @@ const Geografia = () => {
                                         name="codigo"
                                         value={nuevoRegistro.codigo}
                                         onChange={handleInputChange}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#E31E24] focus:border-transparent outline-none transition"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent outline-none transition"
                                         placeholder="Ej: CBBA-CER"
                                     />
                                 </div>
@@ -828,14 +840,14 @@ const Geografia = () => {
                                 {/* Tipo */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Tipo <span className="text-red-500">*</span>
+                                        Tipo <span className="text-[#EF4444]">*</span>
                                     </label>
                                     <select
                                         name="tipo"
                                         value={nuevoRegistro.tipo}
                                         onChange={handleInputChange}
                                         required
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#E31E24] focus:border-transparent outline-none appearance-none"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent outline-none appearance-none"
                                     >
                                         <option value="">Selecciona un tipo...</option>
                                         {tiposDisponibles.map(t => (
@@ -853,7 +865,7 @@ const Geografia = () => {
                                         name="fk_id_geografico"
                                         value={nuevoRegistro.fk_id_geografico}
                                         onChange={handleInputChange}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#E31E24] focus:border-transparent outline-none appearance-none"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent outline-none appearance-none"
                                     >
                                         <option value="">Sin padre (nivel superior)</option>
                                         {padres
@@ -883,7 +895,7 @@ const Geografia = () => {
                                 <button
                                     type="submit"
                                     disabled={guardando}
-                                    className="flex-1 px-6 py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    className="flex-1 px-6 py-3 bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white rounded-xl font-medium hover:from-[#152a63] hover:to-[#0f1f4a] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
                                     {guardando ? (
                                         <>
@@ -906,7 +918,7 @@ const Geografia = () => {
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
                         
                         {/* Header */}
-                        <div className="bg-gray-900 text-white px-6 py-4 flex justify-between items-center">
+                        <div className="bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white px-6 py-4 flex justify-between items-center">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
                                     <MapPin size={18} />
@@ -937,11 +949,11 @@ const Geografia = () => {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <p className="text-xs text-gray-500">Nombre</p>
-                                        <p className="text-sm font-medium text-gray-900">{registroDetalle.nombre}</p>
+                                        <p className="text-sm font-medium text-[#1E3A8A]">{registroDetalle.nombre}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500">Código</p>
-                                        <p className="text-sm font-medium text-gray-900">{registroDetalle.codigo || '—'}</p>
+                                        <p className="text-sm font-medium text-[#F59E0B]">{registroDetalle.codigo || '—'}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500">Tipo</p>
@@ -951,7 +963,7 @@ const Geografia = () => {
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500">ID</p>
-                                        <p className="text-sm font-mono text-gray-600">{registroDetalle.id_geografico}</p>
+                                        <p className="text-sm font-mono text-[#10B981]">{registroDetalle.id_geografico}</p>
                                     </div>
                                 </div>
                             </div>
@@ -964,7 +976,7 @@ const Geografia = () => {
                                 {detallePadre ? (
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-base font-semibold text-gray-900">{detallePadre.nombre}</p>
+                                            <p className="text-base font-semibold text-[#1E3A8A]">{detallePadre.nombre}</p>
                                             <p className="text-xs text-gray-500">{detallePadre.tipo}</p>
                                         </div>
                                         <button
@@ -973,7 +985,7 @@ const Geografia = () => {
                                                 cerrarDetalle();
                                                 abrirDetalle(detallePadre);
                                             }}
-                                            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-all"
+                                            className="px-4 py-2 bg-white border border-[#F59E0B] text-[#F59E0B] rounded-lg text-xs font-medium hover:bg-[#F59E0B] hover:text-white transition-all"
                                         >
                                             Ver padre
                                         </button>
@@ -1003,15 +1015,15 @@ const Geografia = () => {
                                                     cerrarDetalle();
                                                     abrirDetalle(h);
                                                 }}
-                                                className="text-left bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-300 hover:bg-gray-50 transition-all"
+                                                className="text-left bg-white border border-gray-200 rounded-xl p-4 hover:border-[#1E3A8A] hover:shadow-md transition-all"
                                             >
-                                                <p className="font-medium text-gray-900">{h.nombre}</p>
+                                                <p className="font-medium text-[#1E3A8A]">{h.nombre}</p>
                                                 <p className="text-xs text-gray-500 mt-1">
                                                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${getTipoColor(h.tipo)}`}>
                                                         {h.tipo}
                                                     </span>
                                                     {h.codigo && (
-                                                        <span className="ml-2 font-mono">{h.codigo}</span>
+                                                        <span className="ml-2 font-mono text-[#F59E0B]">{h.codigo}</span>
                                                     )}
                                                 </p>
                                             </button>
@@ -1028,7 +1040,7 @@ const Geografia = () => {
                                         cerrarDetalle();
                                         abrirModal(registroDetalle);
                                     }}
-                                    className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"
+                                    className="flex-1 px-6 py-3 bg-[#1E3A8A] hover:bg-[#152a63] text-white rounded-xl font-medium transition flex items-center justify-center gap-2"
                                 >
                                     <Edit size={16} />
                                     Editar
@@ -1039,7 +1051,7 @@ const Geografia = () => {
                                         cerrarDetalle();
                                         handleEliminar(registroDetalle.id_geografico, registroDetalle.nombre);
                                     }}
-                                    className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"
+                                    className="flex-1 px-6 py-3 bg-[#EF4444] hover:bg-[#dc2626] text-white rounded-xl font-medium transition flex items-center justify-center gap-2"
                                 >
                                     <Trash2 size={16} />
                                     Eliminar
@@ -1064,7 +1076,7 @@ const Geografia = () => {
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
                         
                         {/* Header */}
-                        <div className="bg-gray-900 text-white px-6 py-4 flex justify-between items-center">
+                        <div className="bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white px-6 py-4 flex justify-between items-center">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
                                     <Layers size={18} />
@@ -1085,7 +1097,7 @@ const Geografia = () => {
                             {/* Sección: Crear tipo */}
                             <div className="mb-8">
                                 <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                                    <Plus size={16} className="text-green-600" />
+                                    <Plus size={16} className="text-[#10B981]" />
                                     Crear nuevo tipo
                                 </h3>
                                 <div className="flex gap-2">
@@ -1093,14 +1105,14 @@ const Geografia = () => {
                                         type="text"
                                         value={nuevoTipo}
                                         onChange={(e) => setNuevoTipo(e.target.value)}
-                                        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#E31E24] focus:border-transparent outline-none"
+                                        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent outline-none"
                                         placeholder="Ej: Distrito, Provincia, Cantón..."
                                     />
                                     <button
                                         type="button"
                                         onClick={crearTipo}
                                         disabled={cargandoTipos}
-                                        className="px-6 py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 transition disabled:opacity-50"
+                                        className="px-6 py-3 bg-[#1E3A8A] text-white rounded-xl font-medium hover:bg-[#152a63] transition disabled:opacity-50"
                                     >
                                         Crear
                                     </button>
@@ -1113,7 +1125,7 @@ const Geografia = () => {
                             {/* Sección: Eliminar tipo */}
                             <div className="border-t border-gray-200 pt-6">
                                 <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                                    <Trash2 size={16} className="text-red-600" />
+                                    <Trash2 size={16} className="text-[#F59E0B]" />
                                     Eliminar tipo
                                 </h3>
 
@@ -1123,7 +1135,7 @@ const Geografia = () => {
                                         setTipoAEliminar(e.target.value);
                                         setReemplazoTipo('');
                                     }}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#E31E24] focus:border-transparent outline-none mb-4"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent outline-none mb-4"
                                 >
                                     <option value="">Selecciona un tipo...</option>
                                     {tiposDisponibles.map(t => {
@@ -1147,7 +1159,7 @@ const Geografia = () => {
                                                 <select
                                                     value={reemplazoTipo}
                                                     onChange={(e) => setReemplazoTipo(e.target.value)}
-                                                    className="w-full px-4 py-2.5 border border-amber-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+                                                    className="w-full px-4 py-2.5 border border-amber-300 rounded-lg text-sm focus:ring-2 focus:ring-[#F59E0B] focus:border-transparent outline-none"
                                                 >
                                                     <option value="">Selecciona tipo de reemplazo...</option>
                                                     {tiposDisponibles
@@ -1168,7 +1180,7 @@ const Geografia = () => {
                                             disabled={cargandoTipos}
                                             className={`w-full px-6 py-3 rounded-xl font-medium transition flex items-center justify-center gap-2 ${
                                                 tipoAEliminar && !cargandoTipos
-                                                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                                                    ? 'bg-[#F59E0B] hover:bg-[#e68906] text-white'
                                                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                             }`}
                                         >

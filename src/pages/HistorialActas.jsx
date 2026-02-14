@@ -32,8 +32,9 @@ const HistorialActas = () => {
     const [guardando, setGuardando] = useState(false);
     
     // Estados para edición
-    const [votosAlcalde, setVotosAlcalde] = useState([]);
-    const [votosConcejal, setVotosConcejal] = useState([]);
+    const [votosGobernador, setVotosGobernador] = useState([]);
+    const [votosAsambleistaT, setVotosAsambleistaT] = useState([]);
+    const [votosAsambleistaP, setVotosAsambleistaP] = useState([]);
     const [votosNulos, setVotosNulos] = useState(0);
     const [votosBlancos, setVotosBlancos] = useState(0);
     const [observaciones, setObservaciones] = useState('');
@@ -62,6 +63,8 @@ const HistorialActas = () => {
             const data = await response.json();
             
             if (data.success) {
+                console.log(' Detalle del acta cargada:', data.data);
+                console.log(' Distrito:', data.data.acta.nombre_geografico);
                 setActaSeleccionada(data.data);
                 setMostrarDetalle(true);
             }
@@ -97,16 +100,21 @@ const HistorialActas = () => {
                 }
                 
                 // Inicializar votos para edición
-                const votosAlcaldeActa = data.data.votos
-                    .filter(v => v.tipo_cargo === 'alcalde')
+                const votosGobernadorActa = data.data.votos
+                    .filter(v => v.tipo_cargo === 'gobernador')
                     .map(v => ({ id_frente: v.id_frente, cantidad: v.cantidad }));
                 
-                const votosConcejalesActa = data.data.votos
-                    .filter(v => v.tipo_cargo === 'concejal')
+                const votosAsambleistaTActa = data.data.votos
+                    .filter(v => v.tipo_cargo === 'asambleista_territorio')
                     .map(v => ({ id_frente: v.id_frente, cantidad: v.cantidad }));
                 
-                setVotosAlcalde(votosAlcaldeActa);
-                setVotosConcejal(votosConcejalesActa);
+                const votosAsambleistaPActa = data.data.votos
+                    .filter(v => v.tipo_cargo === 'asambleista_poblacion')
+                    .map(v => ({ id_frente: v.id_frente, cantidad: v.cantidad }));
+                
+                setVotosGobernador(votosGobernadorActa);
+                setVotosAsambleistaT(votosAsambleistaTActa);
+                setVotosAsambleistaP(votosAsambleistaPActa);
                 setVotosNulos(data.data.acta.votos_nulos || 0);
                 setVotosBlancos(data.data.acta.votos_blancos || 0);
                 setObservaciones(data.data.acta.observaciones || '');
@@ -140,8 +148,9 @@ const HistorialActas = () => {
                     votos_nulos: parseInt(votosNulos) || 0,
                     votos_blancos: parseInt(votosBlancos) || 0,
                     observaciones,
-                    votos_alcalde: votosAlcalde.filter(v => v.cantidad > 0),
-                    votos_concejal: votosConcejal.filter(v => v.cantidad > 0)
+                    votos_gobernador: votosGobernador.filter(v => v.cantidad > 0),
+                    votos_asambleista_territorio: votosAsambleistaT.filter(v => v.cantidad > 0),
+                    votos_asambleista_poblacion: votosAsambleistaP.filter(v => v.cantidad > 0)
                 })
             });
 
@@ -163,8 +172,18 @@ const HistorialActas = () => {
     };
 
     const actualizarVoto = (tipo, idFrente, cantidad) => {
-        const setter = tipo === 'alcalde' ? setVotosAlcalde : setVotosConcejal;
-        const votos = tipo === 'alcalde' ? votosAlcalde : votosConcejal;
+        let setter, votos;
+        
+        if (tipo === 'gobernador') {
+            setter = setVotosGobernador;
+            votos = votosGobernador;
+        } else if (tipo === 'asambleista_territorio') {
+            setter = setVotosAsambleistaT;
+            votos = votosAsambleistaT;
+        } else {
+            setter = setVotosAsambleistaP;
+            votos = votosAsambleistaP;
+        }
         
         const index = votos.findIndex(v => v.id_frente === idFrente);
         if (index >= 0) {
@@ -177,7 +196,16 @@ const HistorialActas = () => {
     };
 
     const getVotosPorFrente = (tipo, idFrente) => {
-        const votos = tipo === 'alcalde' ? votosAlcalde : votosConcejal;
+        let votos;
+        
+        if (tipo === 'gobernador') {
+            votos = votosGobernador;
+        } else if (tipo === 'asambleista_territorio') {
+            votos = votosAsambleistaT;
+        } else {
+            votos = votosAsambleistaP;
+        }
+        
         const voto = votos.find(v => v.id_frente === idFrente);
         return voto ? voto.cantidad : 0;
     };
@@ -528,30 +556,101 @@ const HistorialActas = () => {
                             {/* Votos por Frente */}
                             <div>
                                 <h3 className="text-lg font-bold text-gray-900 mb-4">Votos por Frente Político</h3>
-                                <div className="space-y-4">
-                                    {actaSeleccionada.votos.map((voto) => (
-                                        <div key={voto.id_voto} className="bg-white border-2 border-gray-200 rounded-xl p-4">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div
-                                                        className="w-12 h-12 rounded-xl"
-                                                        style={{ backgroundColor: voto.color || '#E31E24' }}
-                                                    />
-                                                    <div>
-                                                        <p className="font-bold text-gray-900">{voto.siglas}</p>
-                                                        <p className="text-sm text-gray-600">{voto.nombre_frente}</p>
-                                                        <p className="text-xs text-gray-500 mt-1">
-                                                            Cargo: <span className="font-semibold">{voto.tipo_cargo}</span>
-                                                        </p>
+                                
+                                {/* Votos Gobernador */}
+                                <div className="mb-6">
+                                    <h4 className="text-md font-semibold text-blue-700 mb-3 flex items-center gap-2">
+                                        <ShieldCheck className="w-5 h-5" />
+                                        Gobernador(a)
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {actaSeleccionada.votos
+                                            .filter(voto => voto.tipo_cargo === 'gobernador')
+                                            .map((voto) => (
+                                                <div key={voto.id_voto} className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <div
+                                                                className="w-12 h-12 rounded-xl"
+                                                                style={{ backgroundColor: voto.color || '#E31E24' }}
+                                                            />
+                                                            <div>
+                                                                <p className="font-bold text-gray-900">{voto.siglas}</p>
+                                                                <p className="text-sm text-gray-600">{voto.nombre_frente}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-3xl font-black text-gray-900">{voto.cantidad}</p>
+                                                            <p className="text-sm text-gray-600">votos</p>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <p className="text-3xl font-black text-gray-900">{voto.cantidad}</p>
-                                                    <p className="text-sm text-gray-600">votos</p>
+                                            ))}
+                                    </div>
+                                </div>
+
+                                {/* Votos Asambleista por Territorio */}
+                                <div className="mb-6">
+                                    <h4 className="text-md font-semibold text-orange-700 mb-3 flex items-center gap-2">
+                                        <ClipboardCheck className="w-5 h-5" />
+                                        Asambleista por Territorio
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {actaSeleccionada.votos
+                                            .filter(voto => voto.tipo_cargo === 'asambleista_territorio')
+                                            .map((voto) => (
+                                                <div key={voto.id_voto} className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <div
+                                                                className="w-12 h-12 rounded-xl"
+                                                                style={{ backgroundColor: voto.color || '#E31E24' }}
+                                                            />
+                                                            <div>
+                                                                <p className="font-bold text-gray-900">{voto.siglas}</p>
+                                                                <p className="text-sm text-gray-600">{voto.nombre_frente}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-3xl font-black text-gray-900">{voto.cantidad}</p>
+                                                            <p className="text-sm text-gray-600">votos</p>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                                            ))}
+                                    </div>
+                                </div>
+
+                                {/* Votos Asambleista por Población */}
+                                <div>
+                                    <h4 className="text-md font-semibold text-green-700 mb-3 flex items-center gap-2">
+                                        <ClipboardCheck className="w-5 h-5" />
+                                        Asambleista por Población
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {actaSeleccionada.votos
+                                            .filter(voto => voto.tipo_cargo === 'asambleista_poblacion')
+                                            .map((voto) => (
+                                                <div key={voto.id_voto} className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <div
+                                                                className="w-12 h-12 rounded-xl"
+                                                                style={{ backgroundColor: voto.color || '#E31E24' }}
+                                                            />
+                                                            <div>
+                                                                <p className="font-bold text-gray-900">{voto.siglas}</p>
+                                                                <p className="text-sm text-gray-600">{voto.nombre_frente}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-3xl font-black text-gray-900">{voto.cantidad}</p>
+                                                            <p className="text-sm text-gray-600">votos</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                    </div>
                                 </div>
                             </div>
 
@@ -590,15 +689,15 @@ const HistorialActas = () => {
                         </div>
 
                         <div className="p-8">
-                            {/* Votos Alcalde */}
+                            {/* Votos Gobernador */}
                             <div className="mb-8">
                                 <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                    <ShieldCheck className="w-6 h-6 text-indigo-600" />
-                                    Votos Alcalde
+                                    <ShieldCheck className="w-6 h-6 text-blue-600" />
+                                    Votos Gobernador(a)
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {frentes.map((frente) => (
-                                        <div key={`alcalde-${frente.id_frente}`} className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200 hover:border-indigo-300 transition">
+                                        <div key={`gobernador-${frente.id_frente}`} className="bg-blue-50 rounded-xl p-4 border-2 border-blue-200 hover:border-blue-400 transition">
                                             <div className="flex items-center justify-between gap-4">
                                                 <div className="flex items-center gap-3 flex-1">
                                                     <div
@@ -613,12 +712,12 @@ const HistorialActas = () => {
                                                 <input
                                                     type="text"
                                                     inputMode="numeric"
-                                                    value={getVotosPorFrente('alcalde', frente.id_frente) || ''}
+                                                    value={getVotosPorFrente('gobernador', frente.id_frente) || ''}
                                                     onChange={(e) => {
                                                         const value = e.target.value.replace(/[^0-9]/g, '');
-                                                        actualizarVoto('alcalde', frente.id_frente, parseInt(value) || 0);
+                                                        actualizarVoto('gobernador', frente.id_frente, parseInt(value) || 0);
                                                     }}
-                                                    className="w-24 text-center text-2xl font-bold border-2 border-gray-300 rounded-xl py-3 focus:border-indigo-600 focus:outline-none"
+                                                    className="w-24 text-center text-2xl font-bold border-2 border-gray-300 rounded-xl py-3 focus:border-blue-600 focus:outline-none"
                                                     placeholder="0"
                                                 />
                                             </div>
@@ -627,15 +726,15 @@ const HistorialActas = () => {
                                 </div>
                             </div>
 
-                            {/* Votos Concejal */}
+                            {/* Votos Asambleista por Territorio */}
                             <div className="mb-8">
                                 <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                    <ClipboardCheck className="w-6 h-6 text-purple-600" />
-                                    Votos Concejal
+                                    <ClipboardCheck className="w-6 h-6 text-orange-600" />
+                                    Votos Asambleista por Territorio
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {frentes.map((frente) => (
-                                        <div key={`concejal-${frente.id_frente}`} className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200 hover:border-purple-300 transition">
+                                        <div key={`asambleista_t-${frente.id_frente}`} className="bg-orange-50 rounded-xl p-4 border-2 border-orange-200 hover:border-orange-400 transition">
                                             <div className="flex items-center justify-between gap-4">
                                                 <div className="flex items-center gap-3 flex-1">
                                                     <div
@@ -650,12 +749,49 @@ const HistorialActas = () => {
                                                 <input
                                                     type="text"
                                                     inputMode="numeric"
-                                                    value={getVotosPorFrente('concejal', frente.id_frente) || ''}
+                                                    value={getVotosPorFrente('asambleista_territorio', frente.id_frente) || ''}
                                                     onChange={(e) => {
                                                         const value = e.target.value.replace(/[^0-9]/g, '');
-                                                        actualizarVoto('concejal', frente.id_frente, parseInt(value) || 0);
+                                                        actualizarVoto('asambleista_territorio', frente.id_frente, parseInt(value) || 0);
                                                     }}
-                                                    className="w-24 text-center text-2xl font-bold border-2 border-gray-300 rounded-xl py-3 focus:border-purple-600 focus:outline-none"
+                                                    className="w-24 text-center text-2xl font-bold border-2 border-gray-300 rounded-xl py-3 focus:border-orange-600 focus:outline-none"
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Votos Asambleista por Población */}
+                            <div className="mb-8">
+                                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                    <ClipboardCheck className="w-6 h-6 text-green-600" />
+                                    Votos Asambleista por Población
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {frentes.map((frente) => (
+                                        <div key={`asambleista_p-${frente.id_frente}`} className="bg-green-50 rounded-xl p-4 border-2 border-green-200 hover:border-green-400 transition">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="flex items-center gap-3 flex-1">
+                                                    <div
+                                                        className="w-12 h-12 rounded-xl flex-shrink-0"
+                                                        style={{ backgroundColor: frente.color || '#E31E24' }}
+                                                    />
+                                                    <div className="flex-1">
+                                                        <p className="font-bold text-gray-900">{frente.siglas}</p>
+                                                        <p className="text-xs text-gray-600">{frente.nombre}</p>
+                                                    </div>
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    value={getVotosPorFrente('asambleista_poblacion', frente.id_frente) || ''}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value.replace(/[^0-9]/g, '');
+                                                        actualizarVoto('asambleista_poblacion', frente.id_frente, parseInt(value) || 0);
+                                                    }}
+                                                    className="w-24 text-center text-2xl font-bold border-2 border-gray-300 rounded-xl py-3 focus:border-green-600 focus:outline-none"
                                                     placeholder="0"
                                                 />
                                             </div>
