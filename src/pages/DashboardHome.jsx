@@ -59,14 +59,7 @@ const DashboardHome = () => {
             </div>
             <div className="flex gap-3">
               {/* ✅ Si "Ver votos" NO existe, lo dejo deshabilitado */}
-              <button
-                className="flex items-center gap-2 bg-gray-300 text-gray-500 px-6 py-2.5 rounded-lg font-medium cursor-not-allowed"
-                disabled
-              >
-                <Vote className="w-5 h-5" />
-                Ver votos
-              </button>
-
+        
               {/* ✅ Usuarios funciona */}
               <button
                 onClick={() => navigate('/dashboard/usuarios')}
@@ -78,36 +71,7 @@ const DashboardHome = () => {
             </div>
           </div>
         </div>
-
-        {/* Tarjetas de estadísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            title="USUARIOS"
-            value="1"
-            subtitle="Registrados"
-            icon={<Users className="w-8 h-8" />}
-            bgColor="bg-[#E31E24]"
-          />
-
-          {/* ❌ ELIMINADO: Tarjeta ROLES */}
-
-          <StatCard
-            title="TIPOS DE ELECCIÓN"
-            value="0"
-            subtitle="Catálogo"
-            icon={<Vote className="w-8 h-8" />}
-            bgColor="bg-[#E31E24]"
-          />
-
-          <StatCard
-            title="MESAS"
-            value="0"
-            subtitle="Registradas"
-            icon={<Grid3x3 className="w-8 h-8" />}
-            bgColor="bg-yellow-500"
-          />
-        </div>
-
+          
         {/* Accesos rápidos y Resumen */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Accesos rápidos */}
@@ -204,14 +168,6 @@ const DashboardHome = () => {
                 <span className="text-sm text-gray-600">Usuario</span>
                 <span className="text-sm font-semibold text-gray-900">{user.nombre_usuario}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Geográfico</span>
-                <span className="text-sm font-semibold text-gray-900">0</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Votos registrados</span>
-                <span className="text-sm font-semibold text-gray-900">0</span>
-              </div>
               <div className="flex items-center gap-2 pt-2">
                 <CheckCircle className="w-4 h-4 text-green-500" />
                 <span className="text-xs font-semibold text-green-600">Activo</span>
@@ -247,46 +203,7 @@ const DashboardHome = () => {
         </div>
 
         {/* Últimos votos */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">Últimos votos</h2>
-              <p className="text-sm text-gray-600">Últimos registros (si aplica)</p>
-            </div>
-            <button
-              disabled
-              className="text-gray-400 font-medium text-sm cursor-not-allowed flex items-center gap-1"
-            >
-              Ver todo
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">
-                    FECHA
-                  </th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 uppercase">
-                    DETALLE
-                  </th>
-                  <th className="text-right py-3 px-4 text-xs font-semibold text-gray-600 uppercase">
-                    TOTAL
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colSpan="3" className="text-center py-8 text-gray-400 text-sm">
-                    No hay votos registrados aún
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        
 
       </div>
     </div>

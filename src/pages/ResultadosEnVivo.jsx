@@ -85,10 +85,6 @@ const ResultadosEnVivo = () => {
     const maxVotos = Math.max(...resultados.map(r => r.total_votos || 0), 1);
     
     const actasProcesadas = resumen.totalActas || 0;
-    const participacion = actasProcesadas > 0 
-        ? ((resumen.actasValidadas / actasProcesadas) * 100).toFixed(1) 
-        : 0;
-
     // Ordenar resultados por votos (mayor a menor)
     const resultadosOrdenados = [...resultados].sort((a, b) => 
         (b.total_votos || 0) - (a.total_votos || 0)
@@ -193,31 +189,9 @@ const ResultadosEnVivo = () => {
                         </p>
                     </div>
 
-                    <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#10B981] hover:shadow-xl transition-all">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-[#10B981] bg-opacity-10 rounded-lg">
-                                <CheckCircle className="w-5 h-5 text-[#10B981]" />
-                            </div>
-                            <span className="text-gray-600 font-semibold">Actas Validadas</span>
-                        </div>
-                        <p className="text-4xl font-black text-[#10B981]">{resumen.actasValidadas}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                            {participacion}% del total
-                        </p>
-                    </div>
+                    
 
-                    <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#1E3A8A] hover:shadow-xl transition-all">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-[#1E3A8A] bg-opacity-10 rounded-lg">
-                                <Percent className="w-5 h-5 text-[#1E3A8A]" />
-                            </div>
-                            <span className="text-gray-600 font-semibold">Participación</span>
-                        </div>
-                        <p className="text-4xl font-black text-[#1E3A8A]">{participacion}%</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                            {resumen.actasValidadas} de {actasProcesadas} actas
-                        </p>
-                    </div>
+                    
                 </div>
             </div>
 
