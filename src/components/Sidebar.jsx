@@ -27,11 +27,11 @@ const Sidebar = () => {
         
         <div className="flex items-center gap-4 relative z-10">
           <div className="bg-white/10 backdrop-blur-sm p-2.5 rounded-xl shadow-lg border border-white/20">
-            <span className="font-black text-lg tracking-widest text-white">NGP</span>
+            <span className="font-black text-lg tracking-widest text-white">S.E</span>
           </div>
           <div className="flex flex-col">
-            <span className="font-black text-base leading-tight text-white">NUEVA GENERACIÓN</span>
-            <span className="font-black text-base leading-tight text-white">PATRIÓTICA</span>
+            <span className="font-black text-base leading-tight text-white">SISTEMA ELECTORAL</span>
+            
             <span className="text-[9px] text-white/70 uppercase tracking-wider mt-1 font-medium">
               Sistema Electoral 2026
             </span>
