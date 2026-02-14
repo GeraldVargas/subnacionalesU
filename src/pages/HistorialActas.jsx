@@ -17,7 +17,13 @@ import {
     Save,
     X,
     ShieldCheck,
-    ClipboardCheck
+    ClipboardCheck,
+    ChevronRight,
+    Image as ImageIcon,
+    Hash,
+    Award,
+    Target,
+    Percent
 } from 'lucide-react';
 
 const HistorialActas = () => {
@@ -91,7 +97,6 @@ const HistorialActas = () => {
 
     const iniciarEdicion = async (id) => {
         try {
-            // Cargar detalle del acta
             const response = await fetch(`${API_URL}/votos/acta/${id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -100,12 +105,10 @@ const HistorialActas = () => {
             if (data.success) {
                 setActaSeleccionada(data.data);
                 
-                // Cargar frentes si no están cargados
                 if (frentes.length === 0) {
                     await cargarFrentes();
                 }
                 
-                // Inicializar votos para edición
                 const votosAlcaldeMap = new Map();
                 const votosConcejalesMap = new Map();
                 
@@ -117,7 +120,6 @@ const HistorialActas = () => {
                     }
                 });
                 
-                // Convertir a arrays con todos los frentes
                 const votosAlcaldeArray = frentes.map(f => ({
                     id_frente: f.id_frente,
                     cantidad: votosAlcaldeMap.get(f.id_frente) || 0
@@ -153,7 +155,6 @@ const HistorialActas = () => {
                 return;
             }
 
-            // Filtrar solo votos con cantidad > 0
             const votosAlcaldeFiltrados = votosAlcalde
                 .filter(v => v.cantidad > 0)
                 .map(v => ({ id_frente: v.id_frente, cantidad: v.cantidad }));
@@ -182,7 +183,7 @@ const HistorialActas = () => {
             if (data.success) {
                 alert('Acta editada exitosamente');
                 setMostrarEdicion(false);
-                cargarActas(); // Recargar lista
+                cargarActas();
             } else {
                 alert('Error: ' + (data.message || 'Error al guardar los cambios'));
             }
@@ -194,7 +195,6 @@ const HistorialActas = () => {
         }
     };
 
-    // Escuchar evento de nueva acta registrada
     useEffect(() => {
         const handleActaRegistrada = () => {
             cargarActas();
@@ -250,74 +250,98 @@ const HistorialActas = () => {
 
     const getEstadoBadge = (estado) => {
         const estados = {
-            registrada: { color: 'bg-blue-100 text-blue-800', icon: Clock, label: 'Registrada' },
-            validada: { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Validada' },
-            rechazada: { color: 'bg-red-100 text-red-800', icon: AlertCircle, label: 'Rechazada' },
-            pendiente: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Pendiente' }
+            registrada: { 
+                color: 'bg-[#1E3A8A] bg-opacity-10 text-[#1E3A8A] border border-[#1E3A8A] border-opacity-30', 
+                icon: Clock, 
+                label: 'Registrada' 
+            },
+            validada: { 
+                color: 'bg-[#10B981] bg-opacity-10 text-[#10B981] border border-[#10B981] border-opacity-30', 
+                icon: CheckCircle, 
+                label: 'Validada' 
+            },
+            rechazada: { 
+                color: 'bg-red-50 text-red-700 border border-red-200', 
+                icon: AlertCircle, 
+                label: 'Rechazada' 
+            },
+            pendiente: { 
+                color: 'bg-[#F59E0B] bg-opacity-10 text-[#F59E0B] border border-[#F59E0B] border-opacity-30', 
+                icon: Clock, 
+                label: 'Pendiente' 
+            }
         };
         
         const config = estados[estado] || estados.registrada;
         const IconComponent = config.icon;
         
         return (
-            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${config.color}`}>
-                <IconComponent className="w-3 h-3" />
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${config.color}`}>
+                <IconComponent className="w-3.5 h-3.5" />
                 {config.label}
             </span>
         );
     };
 
     return (
-        <div className="p-8 bg-gray-50 min-h-screen">
-            {/* Header */}
+        <div className="p-8 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+            {/* Header con diseño mejorado */}
             <div className="mb-8">
-                <h1 className="text-3xl font-black text-gray-900 mb-2">
-                    Historial de Actas Registradas
-                </h1>
-                <p className="text-gray-600">
-                    Registro completo de todas las actas procesadas en el sistema
-                </p>
+                <div className="flex items-start gap-4">
+                    <div className="w-14 h-14 bg-gradient-to-br from-[#1E3A8A] to-[#152a63] rounded-2xl shadow-lg flex items-center justify-center">
+                        <FileText className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-3xl font-black text-gray-900 mb-2">
+                            Historial de Actas Registradas
+                        </h1>
+                        <p className="text-gray-600">
+                            Registro completo de todas las actas procesadas en el sistema electoral
+                        </p>
+                    </div>
+                </div>
+                <div className="w-32 h-1 bg-gradient-to-r from-[#1E3A8A] to-[#F59E0B] rounded-full mt-4 ml-4"></div>
             </div>
 
-            {/* Estadísticas */}
+            {/* Estadísticas con diseño NGP */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white rounded-2xl shadow-sm p-6">
+                <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#1E3A8A] hover:shadow-xl transition-all">
                     <div className="flex items-center gap-3 mb-2">
-                        <FileText className="w-6 h-6 text-gray-600" />
-                        <span className="text-gray-600 font-semibold">Total</span>
+                        <div className="p-2 bg-[#1E3A8A] bg-opacity-10 rounded-lg">
+                            <FileText className="w-5 h-5 text-[#1E3A8A]" />
+                        </div>
+                        <span className="text-gray-600 font-semibold">Total Actas</span>
                     </div>
-                    <p className="text-4xl font-black text-gray-900">{estadisticas.total}</p>
+                    <p className="text-4xl font-black text-[#1E3A8A]">{estadisticas.total}</p>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-sm p-6">
+                <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#F59E0B] hover:shadow-xl transition-all">
                     <div className="flex items-center gap-3 mb-2">
-                        <Clock className="w-6 h-6 text-blue-600" />
+                        <div className="p-2 bg-[#F59E0B] bg-opacity-10 rounded-lg">
+                            <Clock className="w-5 h-5 text-[#F59E0B]" />
+                        </div>
                         <span className="text-gray-600 font-semibold">Registradas</span>
                     </div>
-                    <p className="text-4xl font-black text-blue-600">{estadisticas.registradas}</p>
+                    <p className="text-4xl font-black text-[#F59E0B]">{estadisticas.registradas}</p>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-sm p-6">
-                    <div className="flex items-center gap-3 mb-2">
-                        <CheckCircle className="w-6 h-6 text-green-600" />
-                        <span className="text-gray-600 font-semibold">Validadas</span>
-                    </div>
-                    <p className="text-4xl font-black text-green-600">{estadisticas.validadas}</p>
-                </div>
+                
 
-                <div className="bg-white rounded-2xl shadow-sm p-6">
+                <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#1E3A8A] hover:shadow-xl transition-all">
                     <div className="flex items-center gap-3 mb-2">
-                        <TrendingUp className="w-6 h-6 text-purple-600" />
+                        <div className="p-2 bg-[#1E3A8A] bg-opacity-10 rounded-lg">
+                            <TrendingUp className="w-5 h-5 text-[#1E3A8A]" />
+                        </div>
                         <span className="text-gray-600 font-semibold">Votos Totales</span>
                     </div>
-                    <p className="text-4xl font-black text-purple-600">
+                    <p className="text-4xl font-black text-[#1E3A8A]">
                         {actas.reduce((sum, a) => sum + (parseInt(a.votos_totales) || 0), 0).toLocaleString()}
                     </p>
                 </div>
             </div>
 
-            {/* Filtros */}
-            <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+            {/* Filtros mejorados */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-6">
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="flex-1">
                         <div className="relative">
@@ -327,85 +351,85 @@ const HistorialActas = () => {
                                 placeholder="Buscar por mesa, recinto o distrito..."
                                 value={busqueda}
                                 onChange={(e) => setBusqueda(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
+                                className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none transition"
                             />
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Filter className="w-5 h-5 text-gray-400" />
-                        <select
-                            value={filtroEstado}
-                            onChange={(e) => setFiltroEstado(e.target.value)}
-                            className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none"
-                        >
-                            <option value="todos">Todos los estados</option>
-                            <option value="registrada">Registradas</option>
-                            <option value="validada">Validadas</option>
-                            <option value="rechazada">Rechazadas</option>
-                            <option value="pendiente">Pendientes</option>
-                        </select>
-                    </div>
+                    
                 </div>
             </div>
 
             {/* Lista de Actas */}
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
                 {loading ? (
-                    <div className="p-12 text-center">
-                        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-gray-600">Cargando actas...</p>
+                    <div className="p-16 text-center">
+                        <div className="relative">
+                            <div className="w-16 h-16 border-4 border-gray-200 border-t-[#1E3A8A] rounded-full animate-spin mx-auto mb-4"></div>
+                            <FileText className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[#1E3A8A] w-6 h-6" />
+                        </div>
+                        <p className="text-gray-600 font-medium">Cargando actas...</p>
                     </div>
                 ) : actasFiltradas.length === 0 ? (
-                    <div className="p-12 text-center">
-                        <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-600 text-lg">No se encontraron actas</p>
+                    <div className="p-16 text-center">
+                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <FileText className="w-10 h-10 text-gray-400" />
+                        </div>
+                        <p className="text-gray-600 text-lg font-medium">No se encontraron actas</p>
+                        <p className="text-gray-500 text-sm mt-1">
+                            {busqueda ? 'Prueba con otros términos de búsqueda' : 'No hay actas registradas en el sistema'}
+                        </p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full">
-                            <thead className="bg-gray-50 border-b border-gray-200">
+                            <thead className="bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white">
                                 <tr>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Mesa</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Recinto</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Distrito</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Registrado por</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Fecha / Edición</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Votos</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Estado</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Acciones</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase">Mesa</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase">Recinto</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase">Distrito</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase">Registrado por</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase">Fecha / Edición</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase">Votos</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase">Estado</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold uppercase">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {actasFiltradas.map((acta) => (
-                                    <tr key={acta.id_acta} className="hover:bg-gray-50 transition">
+                                {actasFiltradas.map((acta, index) => (
+                                    <tr 
+                                        key={acta.id_acta} 
+                                        className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-[#1E3A8A] hover:bg-opacity-5 transition-colors group`}
+                                    >
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
-                                                <Grid3x3 className="w-4 h-4 text-gray-400" />
-                                                <span className="font-bold text-gray-900">{acta.codigo_mesa}</span>
+                                                <Grid3x3 className="w-4 h-4 text-[#1E3A8A]" />
+                                                <span className="font-bold text-gray-900 group-hover:text-[#1E3A8A] transition-colors">
+                                                    {acta.codigo_mesa}
+                                                </span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
-                                                <Building2 className="w-4 h-4 text-gray-400" />
+                                                <Building2 className="w-4 h-4 text-[#F59E0B]" />
                                                 <span className="text-sm text-gray-900">{acta.nombre_recinto || 'N/A'}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
-                                                <MapPin className="w-4 h-4 text-gray-400" />
+                                                <MapPin className="w-4 h-4 text-[#10B981]" />
                                                 <span className="text-sm text-gray-600">{acta.nombre_geografico || 'N/A'}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
-                                                <User className="w-4 h-4 text-gray-400" />
+                                                <User className="w-4 h-4 text-[#1E3A8A]" />
                                                 <span className="text-sm text-gray-600">{acta.nombre_usuario}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col gap-1">
                                                 <div className="flex items-center gap-2">
-                                                    <Calendar className="w-4 h-4 text-gray-400" />
+                                                    <Calendar className="w-4 h-4 text-[#1E3A8A]" />
                                                     <span className="text-sm text-gray-600">
                                                         {acta.fecha_registro ? new Date(acta.fecha_registro).toLocaleDateString('es-BO', {
                                                             day: '2-digit',
@@ -418,7 +442,7 @@ const HistorialActas = () => {
                                                 </div>
                                                 {acta.editada && acta.fecha_ultima_edicion && (
                                                     <div className="flex items-center gap-1 text-xs">
-                                                        <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full font-semibold">
+                                                        <span className="px-2 py-0.5 bg-[#F59E0B] bg-opacity-10 text-[#F59E0B] border border-[#F59E0B] border-opacity-30 rounded-full font-semibold">
                                                             Editada
                                                         </span>
                                                         <span className="text-gray-500">
@@ -436,9 +460,10 @@ const HistorialActas = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="text-center">
-                                                <span className="font-bold text-gray-900">{acta.votos_totales || 0}</span>
+                                                <span className="font-bold text-[#1E3A8A]">{acta.votos_totales || 0}</span>
                                                 <div className="text-xs text-gray-500">
-                                                    Nulos: {acta.votos_nulos || 0} | Blancos: {acta.votos_blancos || 0}
+                                                    N: <span className="text-red-600">{acta.votos_nulos || 0}</span> | 
+                                                    B: <span className="text-[#F59E0B]">{acta.votos_blancos || 0}</span>
                                                 </div>
                                             </div>
                                         </td>
@@ -449,14 +474,14 @@ const HistorialActas = () => {
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={() => cargarDetalleActa(acta.id_acta)}
-                                                    className="flex items-center gap-2 px-3 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg transition text-sm font-semibold"
+                                                    className="flex items-center gap-2 px-3 py-2 bg-[#1E3A8A] bg-opacity-10 hover:bg-opacity-20 text-[#1E3A8A] rounded-lg transition text-sm font-semibold"
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                     Ver
                                                 </button>
                                                 <button
                                                     onClick={() => iniciarEdicion(acta.id_acta)}
-                                                    className="flex items-center gap-2 px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-lg transition text-sm font-semibold"
+                                                    className="flex items-center gap-2 px-3 py-2 bg-[#F59E0B] bg-opacity-10 hover:bg-opacity-20 text-[#F59E0B] rounded-lg transition text-sm font-semibold"
                                                 >
                                                     <Edit className="w-4 h-4" />
                                                     Editar
@@ -471,81 +496,82 @@ const HistorialActas = () => {
                 )}
             </div>
 
-            {/* Modal de Detalle */}
+            {/* Modal de Detalle con diseño NGP */}
             {mostrarDetalle && actaSeleccionada && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white z-10 px-8 py-6 border-b border-gray-200 rounded-t-3xl">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <div className="sticky top-0 bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white z-10 px-6 py-4 rounded-t-2xl">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-2xl font-black text-gray-900">Detalle del Acta</h2>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                                        <FileText className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold">Detalle del Acta</h2>
+                                        <p className="text-white/70 text-xs mt-1">
+                                            {actaSeleccionada.acta.codigo_mesa} - {actaSeleccionada.acta.nombre_recinto}
+                                        </p>
+                                    </div>
+                                </div>
                                 <button
                                     onClick={() => setMostrarDetalle(false)}
-                                    className="p-2 hover:bg-gray-100 rounded-xl transition"
+                                    className="w-10 h-10 rounded-xl hover:bg-white/10 flex items-center justify-center transition"
                                 >
-                                    X
+                                    <X className="w-5 h-5" />
                                 </button>
                             </div>
                         </div>
 
-                        <div className="p-8">
+                        <div className="p-6">
                             {/* Información del Acta */}
-                            <div className="bg-gray-50 rounded-2xl p-6 mb-6">
-                                <h3 className="text-lg font-bold text-gray-900 mb-4">Información General</h3>
+                            <div className="bg-gray-50 rounded-xl p-5 mb-6 border border-gray-200">
+                                <h3 className="text-sm font-bold text-[#1E3A8A] mb-4 flex items-center gap-2">
+                                    <Hash className="w-4 h-4" />
+                                    Información General
+                                </h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <span className="text-sm text-gray-600">Mesa:</span>
-                                        <p className="font-bold text-gray-900">{actaSeleccionada.acta.codigo_mesa}</p>
+                                        <p className="text-xs text-gray-500 mb-1">Mesa</p>
+                                        <p className="font-bold text-[#1E3A8A]">{actaSeleccionada.acta.codigo_mesa}</p>
                                     </div>
                                     <div>
-                                        <span className="text-sm text-gray-600">Recinto:</span>
-                                        <p className="font-bold text-gray-900">{actaSeleccionada.acta.nombre_recinto}</p>
+                                        <p className="text-xs text-gray-500 mb-1">Recinto</p>
+                                        <p className="font-bold text-[#F59E0B]">{actaSeleccionada.acta.nombre_recinto}</p>
                                     </div>
                                     <div>
-                                        <span className="text-sm text-gray-600">Distrito:</span>
-                                        <p className="font-bold text-gray-900">{actaSeleccionada.acta.nombre_geografico}</p>
+                                        <p className="text-xs text-gray-500 mb-1">Distrito</p>
+                                        <p className="font-bold text-[#10B981]">{actaSeleccionada.acta.nombre_geografico}</p>
                                     </div>
                                     <div>
-                                        <span className="text-sm text-gray-600">Registrado por:</span>
-                                        <p className="font-bold text-gray-900">{actaSeleccionada.acta.nombre_usuario}</p>
+                                        <p className="text-xs text-gray-500 mb-1">Registrado por</p>
+                                        <p className="font-semibold text-gray-900">{actaSeleccionada.acta.nombre_usuario}</p>
                                     </div>
                                     <div>
-                                        <span className="text-sm text-gray-600">Fecha de Registro:</span>
-                                        <p className="font-bold text-gray-900">
-                                            {new Date(actaSeleccionada.acta.fecha_registro).toLocaleDateString('es-BO', {
-                                                day: '2-digit',
-                                                month: '2-digit',
-                                                year: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                            })}
+                                        <p className="text-xs text-gray-500 mb-1">Fecha de Registro</p>
+                                        <p className="font-semibold text-gray-900">
+                                            {new Date(actaSeleccionada.acta.fecha_registro).toLocaleString('es-BO')}
                                         </p>
                                     </div>
                                     {actaSeleccionada.acta.editada && actaSeleccionada.acta.fecha_ultima_edicion && (
                                         <div>
-                                            <span className="text-sm text-gray-600">Última Edición:</span>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold">
+                                            <p className="text-xs text-gray-500 mb-1">Última Edición</p>
+                                            <div className="flex items-center gap-2">
+                                                <span className="px-2 py-1 bg-[#F59E0B] bg-opacity-10 text-[#F59E0B] border border-[#F59E0B] border-opacity-30 rounded-lg text-xs font-bold">
                                                     Editada
                                                 </span>
                                                 <p className="text-sm font-semibold text-gray-900">
-                                                    {new Date(actaSeleccionada.acta.fecha_ultima_edicion).toLocaleDateString('es-BO', {
-                                                        day: '2-digit',
-                                                        month: '2-digit',
-                                                        year: 'numeric',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    })}
+                                                    {new Date(actaSeleccionada.acta.fecha_ultima_edicion).toLocaleString('es-BO')}
                                                 </p>
                                             </div>
                                         </div>
                                     )}
                                     <div>
-                                        <span className="text-sm text-gray-600">Votos Totales:</span>
-                                        <p className="font-bold text-gray-900">{actaSeleccionada.acta.votos_totales}</p>
+                                        <p className="text-xs text-gray-500 mb-1">Votos Totales</p>
+                                        <p className="font-bold text-[#1E3A8A]">{actaSeleccionada.acta.votos_totales}</p>
                                     </div>
                                     <div>
-                                        <span className="text-sm text-gray-600">Estado:</span>
-                                        <div className="mt-1">{getEstadoBadge(actaSeleccionada.acta.estado)}</div>
+                                        <p className="text-xs text-gray-500 mb-1">Estado</p>
+                                        <div>{getEstadoBadge(actaSeleccionada.acta.estado)}</div>
                                     </div>
                                 </div>
                             </div>
@@ -553,13 +579,16 @@ const HistorialActas = () => {
                             {/* Imagen del Acta */}
                             {actaSeleccionada.acta.imagen_url && (
                                 <div className="mb-6">
-                                    <h3 className="text-lg font-bold text-gray-900 mb-4">Imagen del Acta</h3>
-                                    <div className="bg-gray-50 rounded-2xl p-4 border-2 border-gray-200">
+                                    <h3 className="text-sm font-bold text-[#1E3A8A] mb-4 flex items-center gap-2">
+                                        <ImageIcon className="w-4 h-4" />
+                                        Imagen del Acta
+                                    </h3>
+                                    <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
                                         <img
-                                            src={`http://localhost:3000${actaSeleccionada.acta.imagen_url}`}
+                                            src={`${API_URL}${actaSeleccionada.acta.imagen_url}`}
                                             alt="Acta escaneada"
                                             className="w-full h-auto max-h-96 object-contain rounded-xl cursor-pointer hover:scale-105 transition-transform"
-                                            onClick={() => window.open(`http://localhost:3000${actaSeleccionada.acta.imagen_url}`, '_blank')}
+                                            onClick={() => window.open(`${API_URL}${actaSeleccionada.acta.imagen_url}`, '_blank')}
                                         />
                                         <p className="text-xs text-gray-500 text-center mt-2">Click para ver en tamaño completo</p>
                                     </div>
@@ -567,44 +596,52 @@ const HistorialActas = () => {
                             )}
 
                             {/* Votos por Frente */}
-                            <div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-4">Votos por Frente Político</h3>
-                                <div className="space-y-4">
+                            <div className="mb-6">
+                                <h3 className="text-sm font-bold text-[#1E3A8A] mb-4 flex items-center gap-2">
+                                    <Award className="w-4 h-4" />
+                                    Votos por Frente Político
+                                </h3>
+                                <div className="space-y-3">
                                     {actaSeleccionada.votos && actaSeleccionada.votos.length > 0 ? (
                                         actaSeleccionada.votos.map((voto) => (
-                                            <div key={voto.id_voto} className="bg-white border-2 border-gray-200 rounded-xl p-4">
+                                            <div key={voto.id_voto} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition">
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-3">
                                                         <div
-                                                            className="w-12 h-12 rounded-xl"
-                                                            style={{ backgroundColor: voto.color || '#E31E24' }}
+                                                            className="w-12 h-12 rounded-xl shadow-md"
+                                                            style={{ backgroundColor: voto.color || '#1E3A8A' }}
                                                         />
                                                         <div>
-                                                            <p className="font-bold text-gray-900">{voto.siglas}</p>
+                                                            <p className="font-bold text-[#1E3A8A]">{voto.siglas}</p>
                                                             <p className="text-sm text-gray-600">{voto.nombre_frente}</p>
                                                             <p className="text-xs text-gray-500 mt-1">
-                                                                Cargo: <span className="font-semibold">{voto.tipo_cargo}</span>
+                                                                Cargo: <span className="font-semibold text-[#F59E0B]">{voto.tipo_cargo}</span>
                                                             </p>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="text-3xl font-black text-gray-900">{voto.cantidad}</p>
-                                                        <p className="text-sm text-gray-600">votos</p>
+                                                        <p className="text-3xl font-black text-[#F59E0B]">{voto.cantidad}</p>
+                                                        <p className="text-xs text-gray-500">votos</p>
                                                     </div>
                                                 </div>
                                             </div>
                                         ))
                                     ) : (
-                                        <p className="text-center text-gray-500 py-4">No hay votos registrados</p>
+                                        <p className="text-center text-gray-500 py-8 bg-gray-50 rounded-xl">
+                                            No hay votos registrados para esta acta
+                                        </p>
                                     )}
                                 </div>
                             </div>
 
                             {/* Observaciones */}
                             {actaSeleccionada.acta.observaciones && (
-                                <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                                    <h3 className="text-sm font-bold text-yellow-800 mb-2">Observaciones:</h3>
-                                    <p className="text-sm text-yellow-700">{actaSeleccionada.acta.observaciones}</p>
+                                <div className="bg-[#F59E0B] bg-opacity-5 border border-[#F59E0B] border-opacity-30 rounded-xl p-4">
+                                    <h3 className="text-xs font-bold text-[#F59E0B] mb-2 flex items-center gap-2">
+                                        <AlertCircle className="w-3 h-3" />
+                                        Observaciones
+                                    </h3>
+                                    <p className="text-sm text-gray-700">{actaSeleccionada.acta.observaciones}</p>
                                 </div>
                             )}
                         </div>
@@ -612,47 +649,52 @@ const HistorialActas = () => {
                 </div>
             )}
 
-            {/* Modal de Edición */}
+            {/* Modal de Edición con diseño NGP */}
             {mostrarEdicion && actaSeleccionada && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white z-10 px-8 py-6 border-b border-gray-200 rounded-t-3xl">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+                        <div className="sticky top-0 bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white z-10 px-6 py-4 rounded-t-2xl">
                             <div className="flex items-center justify-between">
-                                <div>
-                                    <h2 className="text-2xl font-black text-gray-900">Editar Acta</h2>
-                                    <p className="text-sm text-gray-600 mt-1">
-                                        Mesa: {actaSeleccionada.acta.codigo_mesa} - {actaSeleccionada.acta.nombre_recinto}
-                                    </p>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                                        <Edit className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold">Editar Acta</h2>
+                                        <p className="text-white/70 text-xs mt-1">
+                                            {actaSeleccionada.acta.codigo_mesa} - {actaSeleccionada.acta.nombre_recinto}
+                                        </p>
+                                    </div>
                                 </div>
                                 <button
                                     onClick={() => setMostrarEdicion(false)}
                                     disabled={guardando}
-                                    className="p-2 hover:bg-gray-100 rounded-xl transition"
+                                    className="w-10 h-10 rounded-xl hover:bg-white/10 flex items-center justify-center transition"
                                 >
-                                    <X className="w-6 h-6" />
+                                    <X className="w-5 h-5" />
                                 </button>
                             </div>
                         </div>
 
-                        <div className="p-8">
+                        <div className="p-6">
                             {/* Votos Alcalde */}
                             <div className="mb-8">
-                                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                    <ShieldCheck className="w-6 h-6 text-indigo-600" />
+                                <h3 className="text-lg font-bold text-[#1E3A8A] mb-4 flex items-center gap-2">
+                                    <ShieldCheck className="w-5 h-5" />
                                     Votos Alcalde
                                 </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     {frentes.map((frente) => (
-                                        <div key={`alcalde-${frente.id_frente}`} className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200 hover:border-indigo-300 transition">
+                                        <div key={`alcalde-${frente.id_frente}`} className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:border-[#1E3A8A] transition">
                                             <div className="flex items-center justify-between gap-4">
                                                 <div className="flex items-center gap-3 flex-1">
                                                     <div
-                                                        className="w-12 h-12 rounded-xl flex-shrink-0"
-                                                        style={{ backgroundColor: frente.color || '#E31E24' }}
+                                                        className="w-10 h-10 rounded-lg flex-shrink-0 shadow-md"
+                                                        style={{ backgroundColor: frente.color || '#1E3A8A' }}
                                                     />
-                                                    <div className="flex-1">
-                                                        <p className="font-bold text-gray-900">{frente.siglas}</p>
-                                                        <p className="text-xs text-gray-600">{frente.nombre}</p>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-bold text-[#1E3A8A] truncate">{frente.siglas}</p>
+                                                        <p className="text-xs text-gray-600 truncate">{frente.nombre}</p>
                                                     </div>
                                                 </div>
                                                 <input
@@ -663,7 +705,7 @@ const HistorialActas = () => {
                                                         const value = e.target.value.replace(/[^0-9]/g, '');
                                                         actualizarVoto('alcalde', frente.id_frente, value === '' ? 0 : parseInt(value));
                                                     }}
-                                                    className="w-24 text-center text-2xl font-bold border-2 border-gray-300 rounded-xl py-3 focus:border-indigo-600 focus:outline-none"
+                                                    className="w-20 text-center text-xl font-bold border border-gray-300 rounded-lg py-2 focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A] focus:outline-none"
                                                     placeholder="0"
                                                 />
                                             </div>
@@ -674,22 +716,22 @@ const HistorialActas = () => {
 
                             {/* Votos Concejal */}
                             <div className="mb-8">
-                                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                    <ClipboardCheck className="w-6 h-6 text-purple-600" />
+                                <h3 className="text-lg font-bold text-[#F59E0B] mb-4 flex items-center gap-2">
+                                    <ClipboardCheck className="w-5 h-5" />
                                     Votos Concejal
                                 </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     {frentes.map((frente) => (
-                                        <div key={`concejal-${frente.id_frente}`} className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200 hover:border-purple-300 transition">
+                                        <div key={`concejal-${frente.id_frente}`} className="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:border-[#F59E0B] transition">
                                             <div className="flex items-center justify-between gap-4">
                                                 <div className="flex items-center gap-3 flex-1">
                                                     <div
-                                                        className="w-12 h-12 rounded-xl flex-shrink-0"
-                                                        style={{ backgroundColor: frente.color || '#E31E24' }}
+                                                        className="w-10 h-10 rounded-lg flex-shrink-0 shadow-md"
+                                                        style={{ backgroundColor: frente.color || '#1E3A8A' }}
                                                     />
-                                                    <div className="flex-1">
-                                                        <p className="font-bold text-gray-900">{frente.siglas}</p>
-                                                        <p className="text-xs text-gray-600">{frente.nombre}</p>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-bold text-[#F59E0B] truncate">{frente.siglas}</p>
+                                                        <p className="text-xs text-gray-600 truncate">{frente.nombre}</p>
                                                     </div>
                                                 </div>
                                                 <input
@@ -700,7 +742,7 @@ const HistorialActas = () => {
                                                         const value = e.target.value.replace(/[^0-9]/g, '');
                                                         actualizarVoto('concejal', frente.id_frente, value === '' ? 0 : parseInt(value));
                                                     }}
-                                                    className="w-24 text-center text-2xl font-bold border-2 border-gray-300 rounded-xl py-3 focus:border-purple-600 focus:outline-none"
+                                                    className="w-20 text-center text-xl font-bold border border-gray-300 rounded-lg py-2 focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B] focus:outline-none"
                                                     placeholder="0"
                                                 />
                                             </div>
@@ -711,8 +753,9 @@ const HistorialActas = () => {
 
                             {/* Votos Nulos y Blancos */}
                             <div className="grid grid-cols-2 gap-6 mb-8">
-                                <div className="bg-red-50 rounded-xl p-6 border-2 border-red-200 hover:border-red-400 transition">
-                                    <label className="block text-sm font-bold text-red-900 mb-3">
+                                <div className="bg-red-50 rounded-xl p-6 border border-red-200">
+                                    <label className="block text-sm font-bold text-red-700 mb-3 flex items-center gap-2">
+                                        <Target className="w-4 h-4" />
                                         Votos Nulos
                                     </label>
                                     <input
@@ -723,12 +766,13 @@ const HistorialActas = () => {
                                             const value = e.target.value.replace(/[^0-9]/g, '');
                                             setVotosNulos(value === '' ? 0 : parseInt(value));
                                         }}
-                                        className="w-full text-center text-3xl font-bold border-2 border-gray-300 rounded-xl py-3 focus:border-red-600 focus:outline-none"
+                                        className="w-full text-center text-3xl font-bold border border-red-200 rounded-xl py-3 focus:border-red-600 focus:ring-1 focus:ring-red-600 focus:outline-none"
                                         placeholder="0"
                                     />
                                 </div>
-                                <div className="bg-gray-50 rounded-xl p-6 border-2 border-gray-200 hover:border-gray-400 transition">
-                                    <label className="block text-sm font-bold text-gray-900 mb-3">
+                                <div className="bg-[#F59E0B] bg-opacity-5 rounded-xl p-6 border border-[#F59E0B] border-opacity-30">
+                                    <label className="block text-sm font-bold text-[#F59E0B] mb-3 flex items-center gap-2">
+                                        <Percent className="w-4 h-4" />
                                         Votos Blancos
                                     </label>
                                     <input
@@ -739,7 +783,7 @@ const HistorialActas = () => {
                                             const value = e.target.value.replace(/[^0-9]/g, '');
                                             setVotosBlancos(value === '' ? 0 : parseInt(value));
                                         }}
-                                        className="w-full text-center text-3xl font-bold border-2 border-gray-300 rounded-xl py-3 focus:border-gray-600 focus:outline-none"
+                                        className="w-full text-center text-3xl font-bold border border-gray-200 rounded-xl py-3 focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B] focus:outline-none"
                                         placeholder="0"
                                     />
                                 </div>
@@ -747,14 +791,14 @@ const HistorialActas = () => {
 
                             {/* Observaciones */}
                             <div className="mb-8">
-                                <label className="block text-sm font-bold text-gray-900 mb-3">
+                                <label className="block text-sm font-bold text-[#1E3A8A] mb-3">
                                     Observaciones
                                 </label>
                                 <textarea
                                     value={observaciones}
                                     onChange={(e) => setObservaciones(e.target.value)}
                                     rows={3}
-                                    className="w-full border-2 border-gray-300 rounded-xl p-4 focus:border-indigo-600 focus:outline-none"
+                                    className="w-full border-2 border-gray-200 rounded-xl p-4 focus:border-[#1E3A8A] focus:outline-none transition"
                                     placeholder="Observaciones adicionales sobre esta acta..."
                                 />
                             </div>
@@ -764,7 +808,7 @@ const HistorialActas = () => {
                                 <button
                                     onClick={guardarEdicion}
                                     disabled={guardando}
-                                    className="flex-1 flex items-center justify-center gap-3 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl transition font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="flex-1 flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white rounded-xl transition font-bold text-lg hover:from-[#152a63] hover:to-[#0f1f4a] disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {guardando ? (
                                         <>
@@ -781,7 +825,7 @@ const HistorialActas = () => {
                                 <button
                                     onClick={() => setMostrarEdicion(false)}
                                     disabled={guardando}
-                                    className="px-8 py-4 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-2xl transition font-bold text-lg disabled:opacity-50"
+                                    className="px-8 py-4 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl transition font-bold text-lg disabled:opacity-50"
                                 >
                                     Cancelar
                                 </button>
@@ -790,6 +834,23 @@ const HistorialActas = () => {
                     </div>
                 </div>
             )}
+
+            {/* Estilos de animación */}
+            <style>{`
+                @keyframes fadeIn {
+                    from {
+                        opacity: 0;
+                        transform: scale(0.95);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: scale(1);
+                    }
+                }
+                .animate-fadeIn {
+                    animation: fadeIn 0.2s ease-out;
+                }
+            `}</style>
         </div>
     );
 };
