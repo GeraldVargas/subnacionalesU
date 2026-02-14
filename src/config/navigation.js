@@ -53,13 +53,7 @@ export const MENU_ITEMS = [
       path: '/dashboard/resultados',
       roles: ['Administrador', 'Supervisor'] 
     },
-    { 
-      id: 'supervision', 
-      label: 'Control y Validación', 
-      icon: ShieldAlert, 
-      path: '/dashboard/supervision',
-      roles: ['Administrador', 'Supervisor'] 
-    },
+    
     { 
       id: 'transcripcion', 
       label: 'Digitalización de Actas', 
