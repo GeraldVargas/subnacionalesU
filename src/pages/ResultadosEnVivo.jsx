@@ -42,9 +42,12 @@ const ResultadosEnVivo = () => {
             setLoading(true);
             setError(null);
             
-            const response = await fetch(`${API_URL}/votos/resultados-vivo`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+const response = await fetch(`${API_URL}/votos/resultados-vivo`, {
+    headers
+});
+
             
             const data = await response.json();
 

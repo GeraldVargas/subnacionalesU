@@ -775,7 +775,8 @@ router.get('/acta/:id', verificarToken, async (req, res) => {
 });
 
 // GET /api/votos/resultados-vivo - Obtener resultados en tiempo real
-router.get('/resultados-vivo', verificarToken, async (req, res) => {
+router.get('/resultados-vivo', async (req, res) => {
+
     try {
         // Obtener votos agregados por frente político
         const resultadosQuery = await pool.query(`
