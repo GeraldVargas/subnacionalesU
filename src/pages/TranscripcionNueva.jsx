@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useCallback } from 'react';
 import {
   Save,
   Plus,
@@ -16,6 +16,42 @@ import {
   Vote,
   Camera
 } from 'lucide-react';
+
+// Componente VotoCard memoizado para evitar re-renders innecesarios
+const VotoCard = memo(({ frente, tipo, onVotoChange }) => (
+  <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all">
+    <div className="mb-3">
+      <div className="flex items-center gap-2 mb-2">
+        <div
+          className="w-6 h-6 rounded-md flex-shrink-0"
+          style={{ backgroundColor: frente.color }}
+        />
+        <div className="min-w-0">
+          <p className="font-bold text-gray-900 text-sm">{frente.siglas}</p>
+          <p className="text-xs text-gray-500 truncate">{frente.nombre}</p>
+        </div>
+      </div>
+    </div>
+
+    {/* CLAVE: Input grande como Nulos/Blancos */}
+    <input
+      type="text"
+      inputMode="numeric"
+      enterKeyHint="done"
+      autoComplete="off"
+      maxLength="3"
+      value={String(frente.cantidad ?? '')}
+      onChange={(e) => {
+        const cleaned = e.target.value.replace(/[^0-9]/g, '');
+        onVotoChange(tipo, frente.id_frente, cleaned);
+      }}
+      className="w-full text-center text-2xl font-bold border border-gray-300 rounded-lg py-3 focus:border-[#1E3A8A] focus:ring-2 focus:ring-[#1E3A8A] focus:outline-none"
+      placeholder="0"
+    />
+  </div>
+));
+
+VotoCard.displayName = 'VotoCard';
 
 const Transcripcion = () => {
   const [showModal, setShowModal] = useState(false);
@@ -371,42 +407,6 @@ const Transcripcion = () => {
   const totalVotosConcejal = votosConcejal.reduce((sum, v) => sum + toInt(v.cantidad), 0);
   const totalGeneral = totalVotosAlcalde + totalVotosConcejal + toInt(votosNulos) + toInt(votosBlancos);
 
-  const VotoCard = ({ frente, tipo }) => (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all hover:border-[#F59E0B]">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div
-            className="w-10 h-10 rounded-lg flex-shrink-0 shadow-sm"
-            style={{ backgroundColor: frente.color }}
-          />
-          <div className="min-w-0">
-            <p className="font-bold text-gray-900 truncate">{frente.siglas}</p>
-            <p className="text-xs text-gray-500 truncate">{frente.nombre}</p>
-          </div>
-        </div>
-
-        {/* CLAVE: value string + onChange string (sin parseInt) */}
-        <input
-          type="text"
-          inputMode="numeric"
-          enterKeyHint="done"
-          autoComplete="off"
-          value={String(frente.cantidad ?? '')}
-          onFocus={(e) => {
-            // para que sea fácil reemplazar el número
-            e.target.select();
-          }}
-          onChange={(e) => {
-            const cleaned = e.target.value.replace(/[^0-9]/g, '');
-            updateVotos(tipo, frente.id_frente, cleaned);
-          }}
-          className="w-20 text-center text-xl font-bold border border-gray-300 rounded-lg py-2 focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A] focus:outline-none"
-          placeholder="0"
-        />
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
@@ -718,7 +718,7 @@ const Transcripcion = () => {
                     </div>
                     <div className="space-y-2">
                       {votosAlcalde.map((frente) => (
-                        <VotoCard key={`alc-${frente.id_frente}`} frente={frente} tipo="alcalde" />
+                        <VotoCard key={`alc-${frente.id_frente}`} frente={frente} tipo="alcalde" onVotoChange={updateVotos} />
                       ))}
                     </div>
                   </div>
@@ -732,7 +732,7 @@ const Transcripcion = () => {
                     </div>
                     <div className="space-y-2">
                       {votosConcejal.map((frente) => (
-                        <VotoCard key={`con-${frente.id_frente}`} frente={frente} tipo="concejal" />
+                        <VotoCard key={`con-${frente.id_frente}`} frente={frente} tipo="concejal" onVotoChange={updateVotos} />
                       ))}
                     </div>
                   </div>
@@ -746,9 +746,12 @@ const Transcripcion = () => {
                         inputMode="numeric"
                         enterKeyHint="done"
                         autoComplete="off"
+                        maxLength="3"
                         value={String(votosNulos ?? '')}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => setVotosNulos(e.target.value.replace(/[^0-9]/g, ''))}
+                        onChange={(e) => {
+                          const cleaned = e.target.value.replace(/[^0-9]/g, '');
+                          setVotosNulos(cleaned);
+                        }}
                         className="w-full text-center text-xl font-bold border border-red-200 rounded-lg py-2 focus:border-red-600 focus:ring-1 focus:ring-red-600 focus:outline-none"
                         placeholder="0"
                       />
@@ -761,9 +764,12 @@ const Transcripcion = () => {
                         inputMode="numeric"
                         enterKeyHint="done"
                         autoComplete="off"
+                        maxLength="3"
                         value={String(votosBlancos ?? '')}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => setVotosBlancos(e.target.value.replace(/[^0-9]/g, ''))}
+                        onChange={(e) => {
+                          const cleaned = e.target.value.replace(/[^0-9]/g, '');
+                          setVotosBlancos(cleaned);
+                        }}
                         className="w-full text-center text-xl font-bold border border-gray-200 rounded-lg py-2 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:outline-none"
                         placeholder="0"
                       />

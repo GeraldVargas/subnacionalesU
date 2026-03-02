@@ -208,6 +208,8 @@ const DashboardHome = () => {
                     title="Actas"
                     subtitle="Digitalización"
                     bgColor="bg-[#10B981]"
+  
+  
                     iconColor="text-white"
                     onClick={() => navigate('/dashboard/transcripcion')}
                   />

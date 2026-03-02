@@ -33,6 +33,7 @@ const ResultadosEnVivo = () => {
     const [ultimaActualizacion, setUltimaActualizacion] = useState(null);
     const [error, setError] = useState(null);
     const [autoRefresh, setAutoRefresh] = useState(true);
+    const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('todos');
 
     const API_URL = import.meta.env.VITE_API_URL;
     const token = localStorage.getItem('token');
@@ -84,19 +85,32 @@ const ResultadosEnVivo = () => {
         return ((votos / total) * 100).toFixed(2);
     };
 
-    // Total de votos (incluye nulos y blancos)
-    const totalVotos = parseInt(resumen.totalVotos) || 0;
+    // Obtener votos según categoría seleccionada
+    const obtenerVotosPorCategoria = (frente) => {
+        if (categoriaSeleccionada === 'alcalde') {
+            return parseInt(frente.votos_alcalde) || 0;
+        } else if (categoriaSeleccionada === 'concejal') {
+            return parseInt(frente.votos_concejal) || 0;
+        } else {
+            return parseInt(frente.total_votos) || 0;
+        }
+    };
+
+    // Total de votos según categoría
+    const totalVotos = categoriaSeleccionada === 'todos' 
+        ? (parseInt(resumen.totalVotos) || 0)
+        : resultados.reduce((sum, r) => sum + obtenerVotosPorCategoria(r), 0);
     
     // Total de votos de los frentes
-    const totalVotosValidos = resultados.reduce((sum, r) => sum + (parseInt(r.total_votos) || 0), 0);
+    const totalVotosValidos = resultados.reduce((sum, r) => sum + obtenerVotosPorCategoria(r), 0);
     
-    const maxVotos = Math.max(...resultados.map(r => parseInt(r.total_votos) || 0), 1);
+    const maxVotos = Math.max(...resultados.map(r => obtenerVotosPorCategoria(r)), 1);
     
     const actasProcesadas = parseInt(resumen.totalActas) || 0;
     
-    // Ordenar resultados por votos (mayor a menor)
+    // Ordenar resultados por votos (mayor a menor) - según categoría
     const resultadosOrdenados = [...resultados].sort((a, b) => 
-        (parseInt(b.total_votos) || 0) - (parseInt(a.total_votos) || 0)
+        obtenerVotosPorCategoria(b) - obtenerVotosPorCategoria(a)
     );
 
     return (
@@ -139,6 +153,40 @@ const ResultadosEnVivo = () => {
                                 <Clock className="w-4 h-4" />
                                 {autoRefresh ? 'Auto' : 'Manual'}
                             </button>
+                            
+                            {/* Botones de Categoría */}
+                            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-lg rounded-xl p-1">
+                                <button
+                                    onClick={() => setCategoriaSeleccionada('todos')}
+                                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                                        categoriaSeleccionada === 'todos'
+                                            ? 'bg-white text-[#1E3A8A] font-bold'
+                                            : 'text-white hover:bg-white/20'
+                                    }`}
+                                >
+                                    Todos
+                                </button>
+                                <button
+                                    onClick={() => setCategoriaSeleccionada('alcalde')}
+                                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                                        categoriaSeleccionada === 'alcalde'
+                                            ? 'bg-white text-[#1E3A8A] font-bold'
+                                            : 'text-white hover:bg-white/20'
+                                    }`}
+                                >
+                                    Alcalde
+                                </button>
+                                <button
+                                    onClick={() => setCategoriaSeleccionada('concejal')}
+                                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                                        categoriaSeleccionada === 'concejal'
+                                            ? 'bg-white text-[#1E3A8A] font-bold'
+                                            : 'text-white hover:bg-white/20'
+                                    }`}
+                                >
+                                    Concejal
+                                </button>
+                            </div>
                             
                             <button
                                 onClick={cargarResultados}
@@ -300,7 +348,7 @@ const ResultadosEnVivo = () => {
                                 {/* Área de barras */}
                                 <div className="flex items-end justify-center gap-4 overflow-x-auto pb-2 min-h-[350px] px-4">
                                     {resultadosOrdenados.map((frente, index) => {
-                                        const votos = parseInt(frente.total_votos) || 0;
+                                        const votos = obtenerVotosPorCategoria(frente);
                                         const porcentaje = calcularPorcentaje(votos, totalVotos);
                                         const barHeight = maxVotos > 0 ? (votos / maxVotos) * 200 : 0;
 
@@ -395,7 +443,7 @@ const ResultadosEnVivo = () => {
                             {/* Detalle por frente (Tarjetas) */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {resultadosOrdenados.map((frente, index) => {
-                                    const votos = parseInt(frente.total_votos) || 0;
+                                    const votos = obtenerVotosPorCategoria(frente);
                                     const porcentaje = calcularPorcentaje(votos, totalVotos);
                                     const esGanador = index === 0;
 
@@ -440,18 +488,22 @@ const ResultadosEnVivo = () => {
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
-                                                <div className="bg-gray-50 rounded-lg p-3">
-                                                    <p className="text-xs text-gray-500 mb-1">Votos Alcalde</p>
-                                                    <p className="text-lg font-bold text-[#F59E0B]">
-                                                        {frente.votos_alcalde?.toLocaleString() || 0}
-                                                    </p>
-                                                </div>
-                                                <div className="bg-gray-50 rounded-lg p-3">
-                                                    <p className="text-xs text-gray-500 mb-1">Votos Concejal</p>
-                                                    <p className="text-lg font-bold text-[#10B981]">
-                                                        {frente.votos_concejal?.toLocaleString() || 0}
-                                                    </p>
-                                                </div>
+                                                {(categoriaSeleccionada === 'todos' || categoriaSeleccionada === 'alcalde') && (
+                                                    <div className="bg-gray-50 rounded-lg p-3">
+                                                        <p className="text-xs text-gray-500 mb-1">Votos Alcalde</p>
+                                                        <p className="text-lg font-bold text-[#F59E0B]">
+                                                            {frente.votos_alcalde?.toLocaleString() || 0}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                                {(categoriaSeleccionada === 'todos' || categoriaSeleccionada === 'concejal') && (
+                                                    <div className="bg-gray-50 rounded-lg p-3">
+                                                        <p className="text-xs text-gray-500 mb-1">Votos Concejal</p>
+                                                        <p className="text-lg font-bold text-[#10B981]">
+                                                            {frente.votos_concejal?.toLocaleString() || 0}
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Barra de progreso del porcentaje */}
