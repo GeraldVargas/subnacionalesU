@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import pool from '../database.js';
-import { verificarToken, soloAdministrador } from '../middleware/auth.js';
+import { verificarToken, soloAdministrador, verificarRolPorId } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -25,9 +25,9 @@ router.get('/roles', verificarToken, async (req, res) => {
   }
 });
 
-// GET /api/usuarios - Obtener usuarios (Solo Administrador)
+// GET /api/usuarios - Obtener usuarios (Administrador y Operador)
 // Soporta filtrado por id_rol: ?id_rol=3
-router.get('/', verificarToken, soloAdministrador, async (req, res) => {
+router.get('/', verificarToken, verificarRolPorId(1, 2), async (req, res) => {
   try {
     const { id_rol } = req.query;
 
@@ -147,8 +147,8 @@ router.post('/', verificarToken, soloAdministrador, async (req, res) => {
   }
 });
 
-// GET /api/usuarios/:id - Obtener un usuario por ID (Solo Administrador)
-router.get('/:id', verificarToken, soloAdministrador, async (req, res) => {
+// GET /api/usuarios/:id - Obtener un usuario por ID (Administrador y Operador)
+router.get('/:id', verificarToken, verificarRolPorId(1, 2), async (req, res) => {
   const { id } = req.params;
 
   try {

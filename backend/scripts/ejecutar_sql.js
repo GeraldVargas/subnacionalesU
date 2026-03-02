@@ -2,6 +2,9 @@ import pg from 'pg';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '.env') });
 
 const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
@@ -9,11 +12,11 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, '..');
 
 const pool = new Pool({
-    host: 'localhost',
-    port: 5432,
-    database: 'subnacionales',
-    user: 'postgres',
-    password: 'pass'
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 5432,
+    database: process.env.DB_NAME || 'subnacionales',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'pass'
 });
 
 async function ejecutarScript() {
