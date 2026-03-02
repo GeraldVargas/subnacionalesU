@@ -139,7 +139,83 @@ router.delete('/tipos/:tipo', verificarToken, async (req, res) => {
 // GET - Obtener todos los registros con nombre del padre
 router.get('/', verificarToken, async (req, res) => {
   try {
-    const result = await pool.query(`
+    const { tipo, id_recinto } = req.query;
+    
+    // Si se solicita tipo=mesa, buscar en tabla mesa
+    if (tipo === 'mesa') {
+      let query = `
+        SELECT DISTINCT
+          m.id_mesa,
+          m.numero_mesa,
+          m.codigo,
+          m.descripcion as ubicacion,
+          m.id_recinto,
+          r.nombre as recinto_nombre,
+          g.nombre as distrito_nombre
+        FROM mesa m
+        INNER JOIN recinto r ON m.id_recinto = r.id_recinto
+        LEFT JOIN geografico g ON r.id_geografico = g.id_geografico
+      `;
+      
+      const params = [];
+      if (id_recinto) {
+        query += ` WHERE m.id_recinto = $1`;
+        params.push(parseInt(id_recinto));
+      }
+      
+      query += ` ORDER BY m.numero_mesa ASC`;
+      
+      const result = await pool.query(query, params);
+      
+      const data = result.rows.map(row => ({
+        id_mesa: row.id_mesa,
+        numero_mesa: row.numero_mesa,
+        codigo: row.codigo,
+        ubicacion: row.ubicacion,
+        id_recinto: row.id_recinto,
+        recinto_nombre: row.recinto_nombre,
+        distrito_nombre: row.distrito_nombre,
+        tipo: 'mesa'
+      }));
+
+      return res.json({ success: true, data });
+    }
+    
+    // Si se solicita tipo=recinto, buscar en tabla recinto
+    if (tipo === 'recinto') {
+      const result = await pool.query(`
+        SELECT 
+          r.id_recinto as id_geografico,
+          r.id_recinto,
+          r.nombre,
+          null as codigo,
+          r.direccion as ubicacion,
+          'recinto'::text as tipo,
+          r.id_geografico as fk_id_geografico,
+          g.nombre as nombre_padre,
+          g.nombre as distrito_nombre
+        FROM recinto r
+        LEFT JOIN geografico g ON r.id_geografico = g.id_geografico
+        ORDER BY r.nombre
+      `);
+      
+      const data = result.rows.map(row => ({
+        id_geografico: row.id_geografico,
+        id_recinto: row.id_recinto,
+        nombre: row.nombre,
+        codigo: row.codigo,
+        ubicacion: row.ubicacion,
+        tipo: row.tipo,
+        fk_id_geografico: row.fk_id_geografico,
+        nombre_padre: row.nombre_padre,
+        distrito_nombre: row.distrito_nombre
+      }));
+
+      return res.json({ success: true, data });
+    }
+
+    // Búsqueda en geografico para otros tipos
+    let query = `
       SELECT 
         g.id_geografico,
         g.nombre,
@@ -150,10 +226,31 @@ router.get('/', verificarToken, async (req, res) => {
         p.nombre AS nombre_padre
       FROM geografico g
       LEFT JOIN geografico p ON p.id_geografico = g.fk_id_geografico
-      ORDER BY g.id_geografico DESC
-    `);
+    `;
+    
+    const params = [];
+    
+    if (tipo) {
+      query += ` WHERE g.tipo = $1`;
+      params.push(tipo);
+    }
+    
+    query += ` ORDER BY g.id_geografico DESC`;
 
-    res.json({ success: true, data: result.rows });
+    const result = await pool.query(query, params);
+    
+    // Mapear respuesta para que coincida con lo que expects las páginas
+    const data = result.rows.map(row => ({
+      id_geografico: row.id_geografico,
+      nombre: row.nombre,
+      codigo: row.codigo,
+      ubicacion: row.ubicacion,
+      tipo: row.tipo,
+      fk_id_geografico: row.fk_id_geografico,
+      nombre_padre: row.nombre_padre
+    }));
+
+    res.json({ success: true, data });
   } catch (error) {
     console.error('Error al obtener geografico:', error);
     res.status(500).json({ success: false, message: 'Error al obtener registros geográficos' });

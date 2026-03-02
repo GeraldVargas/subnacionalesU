@@ -49,8 +49,10 @@ router.get('/', verificarToken, async (req, res) => {
         const result = await pool.query(`
             SELECT 
                 a.id_acta,
+                a.id_mesa,
                 a.fecha_registro,
                 a.votos_totales,
+                a.votos_validos,
                 a.votos_nulos,
                 a.votos_blancos,
                 a.estado,

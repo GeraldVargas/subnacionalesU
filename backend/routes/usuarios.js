@@ -1,11 +1,12 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import pool from '../database.js';
+import { verificarToken, soloAdministrador } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // GET /api/usuarios/roles - Obtener todos los roles
-router.get('/roles', async (req, res) => {
+router.get('/roles', verificarToken, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT id_rol, nombre, descripcion
@@ -24,10 +25,13 @@ router.get('/roles', async (req, res) => {
   }
 });
 
-// GET /api/usuarios - Obtener todos los usuarios
-router.get('/', async (req, res) => {
+// GET /api/usuarios - Obtener usuarios (Solo Administrador)
+// Soporta filtrado por id_rol: ?id_rol=3
+router.get('/', verificarToken, soloAdministrador, async (req, res) => {
   try {
-    const result = await pool.query(`
+    const { id_rol } = req.query;
+
+    let query = `
       SELECT
         u.id_usuario,
         u.nombre_usuario,
@@ -37,8 +41,18 @@ router.get('/', async (req, res) => {
         r.descripcion as rol_descripcion
       FROM usuario u
       LEFT JOIN rol r ON u.id_rol = r.id_rol
-      ORDER BY u.id_usuario DESC
-    `);
+    `;
+    
+    const params = [];
+    
+    if (id_rol) {
+      query += ` WHERE u.id_rol = $1`;
+      params.push(parseInt(id_rol));
+    }
+    
+    query += ` ORDER BY u.id_usuario DESC`;
+
+    const result = await pool.query(query, params);
 
     const usuarios = result.rows.map(u => ({
       id_usuario: u.id_usuario,
@@ -61,8 +75,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/usuarios - Crear nuevo usuario (solo nombre_usuario, contrasena, id_rol)
-router.post('/', async (req, res) => {
+// POST /api/usuarios - Crear nuevo usuario (Solo Administrador)
+router.post('/', verificarToken, soloAdministrador, async (req, res) => {
   let { nombre_usuario, contrasena, id_rol } = req.body;
 
   id_rol = parseInt(id_rol, 10);
@@ -133,8 +147,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/usuarios/:id - Obtener un usuario por ID
-router.get('/:id', async (req, res) => {
+// GET /api/usuarios/:id - Obtener un usuario por ID (Solo Administrador)
+router.get('/:id', verificarToken, soloAdministrador, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -180,8 +194,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// PUT /api/usuarios/:id - Actualizar usuario (nombre_usuario, id_rol y opcional contrasena)
-router.put('/:id', async (req, res) => {
+// PUT /api/usuarios/:id - Actualizar usuario (Solo Administrador)
+router.put('/:id', verificarToken, soloAdministrador, async (req, res) => {
   const { id } = req.params;
   let { nombre_usuario, contrasena, id_rol } = req.body;
 
@@ -265,9 +279,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/usuarios/:id - Eliminar usuario (soft delete)
-// DELETE /api/usuarios/:id - Eliminar usuario (BORRADO REAL)
-router.delete('/:id', async (req, res) => {
+// DELETE /api/usuarios/:id - Eliminar usuario (Solo Administrador)
+router.delete('/:id', verificarToken, soloAdministrador, async (req, res) => {
   const { id } = req.params;
 
   try {

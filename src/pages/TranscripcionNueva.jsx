@@ -56,9 +56,51 @@ const Transcripcion = () => {
   const API_URL = import.meta.env.VITE_API_URL;
   const token = localStorage.getItem('token');
 
+  // Obtener usuario y su rol
+  const usuario = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('usuario') || 'null');
+    } catch {
+      return null;
+    }
+  })();
+
+  const isDelegado = usuario?.id_rol === 3;
+  const isJefe = usuario?.id_rol === 4;
+
+  const [miMesa, setMiMesa] = useState(null);
+  const [miRecinto, setMiRecinto] = useState(null);
+
   const toInt = (v) => {
     const n = parseInt(String(v ?? '').replace(/[^0-9]/g, ''), 10);
     return Number.isFinite(n) ? n : 0;
+  };
+
+  // Obtener la mesa asignada al delegado o recinto asignado al jefe
+  const cargarAsignacion = async () => {
+    try {
+      if (isDelegado) {
+        const response = await fetch(`${API_URL}/permisos/delegado/mi-mesa`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+          setMiMesa(data.data);
+          setSelectedMesa(data.data.id_mesa);
+        }
+      } else if (isJefe) {
+        const response = await fetch(`${API_URL}/permisos/jefe/mi-recinto`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+          setMiRecinto(data.data);
+          setSelectedRecinto(data.data.id_recinto);
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar asignación:', error);
+    }
   };
 
   // Cargar distritos al abrir modal
@@ -66,6 +108,10 @@ const Transcripcion = () => {
     if (showModal) {
       cargarDistritos();
       cargarFrentes();
+      // Si es delegado o jefe, cargar su asignación
+      if (isDelegado || isJefe) {
+        cargarAsignacion();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showModal]);

@@ -14,6 +14,10 @@ import FrentesPoliticos from './pages/FrentesPoliticos';
 import Mesas from './pages/Mesas';
 import ResultadosEnVivo from './pages/ResultadosEnVivo';
 import HistorialActas from './pages/HistorialActas';
+import AsignarMesa from './pages/AsignarMesa';
+import AsignarRecinto from './pages/AsignarRecinto';
+import MiMesa from './pages/MiMesa';
+import MiRecinto from './pages/MiRecinto';
 
 function App() {
   return (
@@ -26,18 +30,18 @@ function App() {
 
         <Route path="/dashboard" element={<DashboardLayout />}>
 
-
           <Route index element={<DashboardHome />} />
 
-
+          <Route path="mi-mesa" element={<MiMesa />} />
+          <Route path="mi-recinto" element={<MiRecinto />} />
           <Route path="transcripcion" element={<Transcripcion />} />
           <Route path="historial" element={<HistorialActas />} />
           <Route path="usuarios" element={<GestionUsuarios />} />
-
+          <Route path="asignar-mesa" element={<AsignarMesa />} />
+          <Route path="asignar-recinto" element={<AsignarRecinto />} />
 
           <Route path="geografia" element={<Geografia />} />
           <Route path="mesas" element={<Mesas />} />
-
 
           <Route path="partidos" element={<FrentesPoliticos />} />
           <Route path="resultados" element={<ResultadosEnVivo />} />

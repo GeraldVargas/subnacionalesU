@@ -10,11 +10,27 @@ const Sidebar = () => {
     // Recuperar sesion del usuario
     const user = JSON.parse(localStorage.getItem('usuario')) || {
         nombre_usuario: 'Usuario',
+        id_rol: 999,
         rol: 'Invitado'
     };
 
-    // Filtrar opciones de menu segun el rol
-    const menuPermitido = MENU_ITEMS.filter(item => item.roles.includes(user.rol));
+    // Filtrar opciones de menu por ID de rol (más confiable que por nombre)
+    const menuPermitido = MENU_ITEMS.filter(item => 
+        item.rolesId ? item.rolesId.includes(user.id_rol) : item.roles.includes(user.rol)
+    );
+
+    // Determinar si es admin u operador
+    const esAdmin = user.id_rol === 1;
+    const esOperador = user.id_rol === 2;
+
+    // Debug logging
+    console.log('=== Sidebar Debug ===');
+    console.log('Usuario:', user);
+    console.log('ID Rol:', user.id_rol);
+    console.log('Nombre Rol:', user.rol);
+    console.log('esAdmin (id_rol===1):', esAdmin);
+    console.log('esOperador (id_rol===2):', esOperador);
+    console.log('menuPermitido:', menuPermitido);
 
     // URL del backend para el logo
    
@@ -82,12 +98,12 @@ const Sidebar = () => {
                         Navegación
                     </p>
                 </div>
-                
+
                 <nav className="space-y-1.5">
                     {menuPermitido.map((item) => {
                         const isActive = location.pathname === item.path;
                         const Icon = item.icon;
-                        
+
                         return (
                             <button
                                 key={item.path}

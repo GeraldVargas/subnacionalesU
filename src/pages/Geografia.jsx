@@ -64,10 +64,7 @@ const Geografia = () => {
         }
     })();
 
-    const esAdmin = (usuario?.rol || usuario?.nombre_rol || usuario?.tipo_rol || '')
-        .toString()
-        .toLowerCase()
-        .includes('admin');
+    const esAdmin = usuario?.id_rol === 1;
 
     // ========== TIPOS DINÁMICOS ==========
     const [tiposDisponibles, setTiposDisponibles] = useState([]);

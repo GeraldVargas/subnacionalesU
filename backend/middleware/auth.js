@@ -22,6 +22,7 @@ export const verificarToken = (req, res, next) => {
         req.usuario = {
             id_usuario: decoded.id,
             nombre_usuario: decoded.nombre_usuario,
+            id_rol: decoded.id_rol,
             rol: decoded.rol
         };
 
@@ -36,7 +37,7 @@ export const verificarToken = (req, res, next) => {
     }
 };
 
-// Middleware para verificar roles específicos
+// Middleware para verificar roles específicos por nombre
 export const verificarRol = (...rolesPermitidos) => {
     return (req, res, next) => {
         if (!req.usuario) {
@@ -47,6 +48,46 @@ export const verificarRol = (...rolesPermitidos) => {
         }
 
         if (!rolesPermitidos.includes(req.usuario.rol)) {
+            return res.status(403).json({
+                success: false,
+                message: 'No tienes permisos para realizar esta acción'
+            });
+        }
+
+        next();
+    };
+};
+
+// Middleware para verificar solo Administrador
+export const soloAdministrador = (req, res, next) => {
+    if (!req.usuario) {
+        return res.status(401).json({
+            success: false,
+            message: 'Usuario no autenticado'
+        });
+    }
+
+    if (req.usuario.id_rol !== 1) {
+        return res.status(403).json({
+            success: false,
+            message: 'Solo los administradores pueden realizar esta acción'
+        });
+    }
+
+    next();
+};
+
+// Middleware para verificar roles por ID
+export const verificarRolPorId = (...idsRolPermitidos) => {
+    return (req, res, next) => {
+        if (!req.usuario) {
+            return res.status(401).json({
+                success: false,
+                message: 'Usuario no autenticado'
+            });
+        }
+
+        if (!idsRolPermitidos.includes(req.usuario.id_rol)) {
             return res.status(403).json({
                 success: false,
                 message: 'No tienes permisos para realizar esta acción'

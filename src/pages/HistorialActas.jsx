@@ -52,6 +52,21 @@ const HistorialActas = () => {
 
     const token = localStorage.getItem('token');
 
+    // Obtener usuario y su rol
+    const usuario = (() => {
+        try {
+            return JSON.parse(localStorage.getItem('usuario') || 'null');
+        } catch {
+            return null;
+        }
+    })();
+
+    const isDelegado = usuario?.id_rol === 3;
+    const isJefe = usuario?.id_rol === 4;
+
+    const [miMesa, setMiMesa] = useState(null);
+    const [miRecinto, setMiRecinto] = useState(null);
+
     const cargarActas = async () => {
         try {
             setLoading(true);
@@ -61,7 +76,19 @@ const HistorialActas = () => {
             const data = await response.json();
             
             if (data.success) {
-                setActas(data.data);
+                let actasFiltradas = data.data;
+
+                // Si es delegado, filtrar por su mesa
+                if (isDelegado && miMesa) {
+                    actasFiltradas = actasFiltradas.filter(a => a.id_mesa === miMesa.id_mesa);
+                }
+
+                // Si es jefe, filtrar por su recinto
+                if (isJefe && miRecinto) {
+                    actasFiltradas = actasFiltradas.filter(a => a.id_recinto === miRecinto.id_recinto);
+                }
+
+                setActas(actasFiltradas);
             }
         } catch (error) {
             console.error('Error al cargar actas:', error);
@@ -233,6 +260,34 @@ const HistorialActas = () => {
         cargarActas();
         cargarFrentes();
     }, []);
+
+    // Cargar asignación de delegado o jefe
+    useEffect(() => {
+        if (isDelegado) {
+            fetch(`${API_URL}/permisos/delegado/mi-mesa`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(r => r.json())
+            .then(d => { if (d.success) setMiMesa(d.data); })
+            .catch(e => console.error('Error:', e));
+        } else if (isJefe) {
+            fetch(`${API_URL}/permisos/jefe/mi-recinto`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(r => r.json())
+            .then(d => { if (d.success) setMiRecinto(d.data); })
+            .catch(e => console.error('Error:', e));
+        }
+    }, [isDelegado, isJefe]);
+
+    // Recargar actas cuando se cargue la asignación
+    useEffect(() => {
+        if (isDelegado && miMesa) {
+            cargarActas();
+        } else if (isJefe && miRecinto) {
+            cargarActas();
+        }
+    }, [miMesa, miRecinto]);
 
     const actasFiltradas = actas.filter(acta => {
         const coincideBusqueda = 
