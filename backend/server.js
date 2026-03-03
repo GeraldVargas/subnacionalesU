@@ -34,6 +34,9 @@ app.use(express.urlencoded({ extended: true }));
 // Servir archivos estáticos (imágenes)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Servir archivos estáticos del frontend (dist)
+app.use(express.static(path.join(__dirname, '../dist')));
+
 // Rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
