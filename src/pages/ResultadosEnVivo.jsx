@@ -120,6 +120,13 @@ const ResultadosEnVivo = () => {
                 <div className="bg-gradient-to-r from-[#1E3A8A] to-[#152a63] rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8">
                     <div className="flex flex-col sm:flex-row items-start gap-3 sm:items-center sm:justify-between">
                         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="p-2 sm:p-2.5 hover:bg-white/20 rounded-lg transition flex-shrink-0"
+                                title="Volver"
+                            >
+                                <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                            </button>
                             <div className="p-2 sm:p-4 bg-white/20 rounded-lg sm:rounded-2xl backdrop-blur-lg flex-shrink-0">
                                 <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12 text-white" />
                             </div>
@@ -421,7 +428,96 @@ const ResultadosEnVivo = () => {
                                 </div>
                             </div>
 
-                            {/* Detalle por frente (Tarjetas) */}
+                            {/* 🎨 GRÁFICO DE DONA */}
+                            <div className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 border border-gray-200 shadow-inner">
+                                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2">
+                                    <PieChart className="w-5 h-5 sm:w-6 sm:h-6 text-[#F59E0B]" />
+                                    Distribución de Votos
+                                </h3>
+                                <div className="flex flex-col md:flex-row items-center justify-center gap-4 sm:gap-6 md:gap-8">
+                                    {/* SVG Dona */}
+                                    <div className="w-full md:w-1/2 flex justify-center">
+                                        <svg viewBox="0 0 200 200" className="w-48 sm:w-56 md:w-64 h-48 sm:h-56 md:h-64">
+                                            {(() => {
+                                                let cumulativeAngle = 0;
+                                                const radius = 60;
+                                                const innerRadius = 40;
+                                                const center = 100;
+
+                                                return resultadosOrdenados.map((frente, index) => {
+                                                    const votos = obtenerVotosPorCategoria(frente);
+                                                    const porcentaje = (votos / totalVotos) * 100;
+                                                    const sliceAngle = (porcentaje / 100) * 360;
+                                                    const startAngle = cumulativeAngle;
+                                                    const endAngle = cumulativeAngle + sliceAngle;
+
+                                                    const startRad = (startAngle * Math.PI) / 180;
+                                                    const endRad = (endAngle * Math.PI) / 180;
+
+                                                    const x1Outer = center + radius * Math.cos(startRad);
+                                                    const y1Outer = center + radius * Math.sin(startRad);
+                                                    const x2Outer = center + radius * Math.cos(endRad);
+                                                    const y2Outer = center + radius * Math.sin(endRad);
+
+                                                    const x1Inner = center + innerRadius * Math.cos(startRad);
+                                                    const y1Inner = center + innerRadius * Math.sin(startRad);
+                                                    const x2Inner = center + innerRadius * Math.cos(endRad);
+                                                    const y2Inner = center + innerRadius * Math.sin(endRad);
+
+                                                    const largeArc = sliceAngle > 180 ? 1 : 0;
+
+                                                    const path = `
+                                                        M ${x1Outer} ${y1Outer}
+                                                        A ${radius} ${radius} 0 ${largeArc} 1 ${x2Outer} ${y2Outer}
+                                                        L ${x2Inner} ${y2Inner}
+                                                        A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x1Inner} ${y1Inner}
+                                                        Z
+                                                    `;
+
+                                                    cumulativeAngle += sliceAngle;
+
+                                                    return (
+                                                        <g key={`dona-${frente.id_frente}`}>
+                                                            <path
+                                                                d={path}
+                                                                fill={frente.color || '#1E3A8A'}
+                                                                stroke="white"
+                                                                strokeWidth="1"
+                                                                className="hover:opacity-80 transition-opacity cursor-pointer group"
+                                                            />
+                                                            <title>{frente.siglas}: {porcentaje.toFixed(1)}%</title>
+                                                        </g>
+                                                    );
+                                                });
+                                            })()}
+                                        </svg>
+                                    </div>
+
+                                    {/* Leyenda con datos */}
+                                    <div className="w-full md:w-1/2 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                                        {resultadosOrdenados.map((frente) => {
+                                            const votos = obtenerVotosPorCategoria(frente);
+                                            const porcentaje = ((votos / totalVotos) * 100).toFixed(1);
+                                            return (
+                                                <div key={`leyenda-${frente.id_frente}`} className="flex items-center gap-2 p-2 sm:p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition">
+                                                    <div
+                                                        className="w-4 h-4 sm:w-5 sm:h-5 rounded"
+                                                        style={{ backgroundColor: frente.color || '#1E3A8A' }}
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-xs sm:text-sm font-bold text-[#1E3A8A] truncate">{frente.siglas}</p>
+                                                        <p className="text-xs text-gray-500 truncate">{frente.nombre}</p>
+                                                    </div>
+                                                    <div className="text-right flex-shrink-0">
+                                                        <p className="text-sm sm:text-base font-bold text-[#F59E0B]">{porcentaje}%</p>
+                                                        <p className="text-xs text-gray-500">{votos.toLocaleString()}</p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                                 {resultadosOrdenados.map((frente, index) => {
                                     const votos = obtenerVotosPorCategoria(frente);
