@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { Plus, CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const MiMesa = () => {
@@ -206,17 +206,9 @@ const MiMesa = () => {
             <div className="bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white shadow-lg sticky top-0 z-10">
                 <div className="max-w-7xl mx-auto px-8 py-6">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => navigate('/dashboard')}
-                                className="p-2 hover:bg-white/10 rounded-lg transition"
-                            >
-                                <ArrowLeft className="w-5 h-5" />
-                            </button>
-                            <div>
-                                <h1 className="text-3xl font-bold">Mi Mesa Electoral</h1>
-                                <p className="text-white/80 mt-1">Registrar votos por partidos políticos</p>
-                            </div>
+                        <div>
+                            <h1 className="text-3xl font-bold">Mi Mesa Electoral</h1>
+                            <p className="text-white/80 mt-1">Registrar votos por partidos políticos</p>
                         </div>
                         <button
                             onClick={() => setShowRegistrarVotos(!showRegistrarVotos)}

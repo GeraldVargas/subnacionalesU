@@ -330,23 +330,23 @@ const Mesas = () => {
   );
 
   return (
-    <div className="p-8 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen font-sans">
+    <div className="p-4 sm:p-6 md:p-8 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen font-sans">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-start gap-4">
-          <div className="w-14 h-14 bg-gradient-to-br from-[#1E3A8A] to-[#152a63] rounded-2xl shadow-lg flex items-center justify-center">
-            <Grid3x3 className="w-8 h-8 text-white" />
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-[#1E3A8A] to-[#152a63] rounded-lg sm:rounded-2xl shadow-lg flex items-center justify-center flex-shrink-0">
+            <Grid3x3 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
           </div>
-          <div>
-            <h1 className="text-3xl font-black text-gray-900 mb-2">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 mb-1 sm:mb-2 break-words">
               Gestión de Recintos y Mesas
             </h1>
-            <p className="text-gray-600">
+            <p className="text-xs sm:text-sm text-gray-600">
               Administra los recintos electorales y sus mesas de votación
             </p>
           </div>
         </div>
-        <div className="w-32 h-1 bg-gradient-to-r from-[#1E3A8A] to-[#F59E0B] rounded-full mt-4 ml-4"></div>
+        <div className="w-24 h-1 bg-gradient-to-r from-[#1E3A8A] to-[#F59E0B] rounded-full mt-3 sm:mt-4 ml-0 sm:ml-4"></div>
       </div>
 
       {/* Tabs con colores NGP */}

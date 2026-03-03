@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, CheckCircle, AlertCircle, Loader, Users } from 'lucide-react';
+import { Plus, CheckCircle, AlertCircle, Loader, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const MiRecinto = () => {
@@ -224,7 +224,7 @@ const MiRecinto = () => {
 
     if (loading) {
         return (
-            <div className="p-8 flex items-center justify-center min-h-screen">
+            <div className="p-4 sm:p-6 md:p-8 flex items-center justify-center min-h-screen">
                 <Loader className="w-8 h-8 animate-spin text-[#1E3A8A]" />
             </div>
         );
@@ -232,8 +232,8 @@ const MiRecinto = () => {
 
     if (error && !miRecinto) {
         return (
-            <div className="p-8">
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+            <div className="p-4 sm:p-6 md:p-8">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
                     {error}
                 </div>
             </div>
@@ -248,68 +248,61 @@ const MiRecinto = () => {
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
             {/* Header */}
             <div className="bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white shadow-lg sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-8 py-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => navigate('/dashboard')}
-                                className="p-2 hover:bg-white/10 rounded-lg transition"
-                            >
-                                <ArrowLeft className="w-5 h-5" />
-                            </button>
-                            <div>
-                                <h1 className="text-3xl font-bold">Mi Recinto Electoral</h1>
-                                <p className="text-white/80 mt-1">Gestión de mesas y votos</p>
-                            </div>
+                <div className="px-4 sm:px-6 md:px-8 max-w-7xl mx-auto">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 py-4 sm:py-6">
+                        <div className="min-w-0">
+                            <h1 className="text-lg sm:text-2xl md:text-3xl font-bold truncate">Mi Recinto Electoral</h1>
+                            <p className="text-xs sm:text-sm text-white/80 mt-0.5 sm:mt-1">Gestión de mesas y votos</p>
                         </div>
                         <button
                             onClick={() => setShowRegistrarVotos(!showRegistrarVotos)}
                             disabled={!selectedMesa}
-                            className="bg-[#10B981] hover:bg-[#059669] disabled:opacity-50 disabled:cursor-not-allowed px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition"
+                            className="bg-[#10B981] hover:bg-[#059669] disabled:opacity-50 disabled:cursor-not-allowed px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition text-sm sm:text-base whitespace-nowrap flex-shrink-0"
                         >
-                            <Plus size={20} />
-                            Registrar Votos
+                            <Plus size={18} className="sm:w-5 sm:h-5" />
+                            <span className="hidden sm:inline">Registrar Votos</span>
+                            <span className="sm:hidden">+Votos</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-8 py-8">
+            <div className="px-4 sm:px-6 md:px-8 max-w-7xl mx-auto py-6 sm:py-8">
                 {/* Info Recinto */}
                 {miRecinto && (
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4">Información del Recinto</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="bg-gradient-to-br from-[#1E3A8A]/10 to-[#1E3A8A]/5 p-4 rounded-lg">
-                                <p className="text-sm text-gray-600 font-medium">Recinto</p>
-                                <p className="text-2xl font-bold text-[#1E3A8A]">{miRecinto.nombre}</p>
+                    <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Información del Recinto</h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                            <div className="bg-gradient-to-br from-[#1E3A8A]/10 to-[#1E3A8A]/5 p-3 sm:p-4 rounded-lg">
+                                <p className="text-xs sm:text-sm text-gray-600 font-medium">Recinto</p>
+                                <p className="text-lg sm:text-2xl font-bold text-[#1E3A8A] break-words">{miRecinto.nombre}</p>
                             </div>
-                            <div className="bg-gradient-to-br from-[#F59E0B]/10 to-[#F59E0B]/5 p-4 rounded-lg">
-                                <p className="text-sm text-gray-600 font-medium">Distrito</p>
-                                <p className="text-lg font-medium text-[#F59E0B]">{miRecinto.distrito_nombre || 'N/A'}</p>
+                            <div className="bg-gradient-to-br from-[#F59E0B]/10 to-[#F59E0B]/5 p-3 sm:p-4 rounded-lg">
+                                <p className="text-xs sm:text-sm text-gray-600 font-medium">Distrito</p>
+                                <p className="text-base sm:text-lg font-medium text-[#F59E0B] break-words">{miRecinto.distrito_nombre || 'N/A'}</p>
                             </div>
-                            <div className="bg-gradient-to-br from-[#10B981]/10 to-[#10B981]/5 p-4 rounded-lg">
-                                <p className="text-sm text-gray-600 font-medium">Total Mesas</p>
-                                <p className="text-2xl font-bold text-[#10B981]">{mesas.length}</p>
+                            <div className="bg-gradient-to-br from-[#10B981]/10 to-[#10B981]/5 p-3 sm:p-4 rounded-lg">
+                                <p className="text-xs sm:text-sm text-gray-600 font-medium">Total Mesas</p>
+                                <p className="text-lg sm:text-2xl font-bold text-[#10B981]">{mesas.length}</p>
                             </div>
                         </div>
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                     {/* Mesas Listado */}
                     <div className="lg:col-span-1">
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                            <div className="px-6 py-4 bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white">
-                                <h3 className="font-bold flex items-center gap-2">
-                                    <Users size={18} />
+                        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                            <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white">
+                                <h3 className="font-bold flex items-center gap-2 text-sm sm:text-base">
+                                    <Users size={16} className="sm:w-5 sm:h-5" />
                                     Mesas ({mesas.length})
                                 </h3>
                             </div>
 
                             <div className="divide-y max-h-96 overflow-y-auto">
                                 {mesas.length === 0 ? (
-                                    <div className="p-4 text-center text-gray-500 text-sm">
+                                    <div className="p-4 text-center text-gray-500 text-xs sm:text-sm">
                                         No hay mesas en este recinto
                                     </div>
                                 ) : (
@@ -321,7 +314,7 @@ const MiRecinto = () => {
                                             <button
                                                 key={mesa.id_mesa}
                                                 onClick={() => setSelectedMesa(mesa)}
-                                                className={`w-full p-4 text-left transition hover:bg-gray-50 ${
+                                                className={`w-full p-3 sm:p-4 text-left transition hover:bg-gray-50 text-sm sm:text-base ${
                                                     isSelected ? 'bg-[#1E3A8A]/5 border-l-4 border-[#1E3A8A]' : ''
                                                 }`}
                                             >
@@ -344,7 +337,7 @@ const MiRecinto = () => {
                     </div>
 
                     {/* Panel Derecha */}
-                    <div className="lg:col-span-2 space-y-8">
+                    <div className="lg:col-span-2 space-y-6 sm:space-y-8">
                         {/* Registrar Votos*/}
                         {showRegistrarVotos && selectedMesa && (
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

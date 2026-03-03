@@ -75,47 +75,47 @@ const DashboardHome = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header con gradiente NGP */}
       <div className="bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white shadow-lg sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-8 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
               <div className="bg-white/10 p-2.5 rounded-xl">
-                <Layout className="w-5 h-5" />
+                <Layout className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <span className="text-sm font-medium text-white/80">Panel de Control</span>
-                <span className="text-xs text-white/60 mx-2">•</span>
-                <span className="text-sm font-medium text-white/80">{fecha}</span>
+                <span className="text-xs sm:text-sm font-medium text-white/80">Panel de Control</span>
+                <span className="text-xs text-white/60 mx-1 sm:mx-2">•</span>
+                <span className="text-xs sm:text-sm font-medium text-white/80">{fecha}</span>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-xl">
-                <UserCircle2 className="w-5 h-5 text-[#F59E0B]" />
-                <span className="text-sm font-semibold">{user.nombre_usuario}</span>
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+              <div className="flex items-center gap-2 sm:gap-3 bg-white/10 px-2 sm:px-4 py-1 sm:py-2 rounded-xl">
+                <UserCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#F59E0B]" />
+                <span className="text-xs sm:text-sm font-semibold hidden sm:inline">{user.nombre_usuario}</span>
               </div>
-              <div className="flex items-center gap-2 bg-white/10 px-3 py-2 rounded-xl">
+              <div className="flex items-center gap-2 bg-white/10 px-2 sm:px-3 py-1 sm:py-2 rounded-xl">
                 <span className="w-2 h-2 bg-[#10B981] rounded-full animate-pulse"></span>
-                <span className="text-xs text-white/80">Sistema activo</span>
+                <span className="text-xs text-white/80 hidden sm:inline">Sistema activo</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-8">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8">
         {/* Título y botones */}
-        <div className="mb-8">
-          <div className="flex items-start justify-between">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 sm:gap-0">
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-1.5 h-8 bg-gradient-to-b from-[#1E3A8A] to-[#F59E0B] rounded-full"></div>
-                <h1 className="text-3xl font-black text-gray-900">
+              <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                <div className="w-1.5 h-6 sm:h-8 bg-gradient-to-b from-[#1E3A8A] to-[#F59E0B] rounded-full"></div>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900">
                   {isAdmin && 'Panel de Administración'}
                   {isOperador && 'Panel de Operador'}
                   {isDelegado && 'Mi Mesa Electoral'}
                   {isJefe && 'Mi Recinto Electoral'}
                 </h1>
               </div>
-              <p className="text-gray-600 ml-4">
+              <p className="text-xs sm:text-sm md:text-base text-gray-600 ml-3 sm:ml-4">
                 {isAdmin && 'Acceso total a todos los módulos del sistema'}
                 {isOperador && 'Digitalización y registro de actas'}
                 {isDelegado && 'Gestión y control de votos de su mesa asignada'}
