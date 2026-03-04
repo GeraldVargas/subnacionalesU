@@ -329,10 +329,10 @@ router.post('/asignar-jefe', verificarToken, async (req, res) => {
             });
         }
 
-        if (usuarioResult.rows[0].id_rol !== 4) {
+        if (usuarioResult.rows[0].id_rol !== 3 && usuarioResult.rows[0].id_rol !== 4) {
             return res.status(400).json({
                 success: false,
-                message: 'El usuario debe tener rol de Jefe de Recinto'
+                message: 'El usuario debe tener rol de Delegado de Mesa o Jefe de Recinto'
             });
         }
 

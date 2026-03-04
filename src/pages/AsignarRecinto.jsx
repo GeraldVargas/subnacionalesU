@@ -59,8 +59,8 @@ const AsignarRecinto = () => {
             setLoading(true);
             setMessage({ type: '', text: '' });
 
-            // Cargar jefes (usuarios con rol Jefe de Recinto)
-            const resJefes = await fetch(`${API_URL}/usuarios?id_rol=4`, {
+            // Cargar jefes (usuarios con rol Delegado de Mesa que pueden ser jefes)
+            const resJefes = await fetch(`${API_URL}/usuarios?id_rol=3`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             console.log('Jefes response:', resJefes.status);
