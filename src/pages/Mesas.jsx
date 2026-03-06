@@ -45,7 +45,6 @@ const Mesas = () => {
   const [selectedModalZona, setSelectedModalZona] = useState('');
   // Buscador de distrito en el panel de filtros
   const [buscarDistrito, setBuscarDistrito] = useState('');
-  const [showDistritoDropdown, setShowDistritoDropdown] = useState(false);
 
   // Estados del formulario
   const [formRecinto, setFormRecinto] = useState({
@@ -66,10 +65,26 @@ const Mesas = () => {
 
   // Cargar datos iniciales
   useEffect(() => {
-    cargarDistritos();
     cargarTodosLosRecintos();
     cargarTodaGeografia();
   }, []);
+
+  // Derivar distritos desde todaLaGeografia (case-insensitive, sin duplicados)
+  useEffect(() => {
+    if (todaLaGeografia.length === 0) return;
+    const tiposDistrito = ['distrito', 'municipio', 'ciudad'];
+    const found = todaLaGeografia.filter(g =>
+      tiposDistrito.includes((g.tipo || '').toLowerCase())
+    );
+    const seen = new Set();
+    const base = found.length > 0 ? found : todaLaGeografia;
+    const unicos = base.filter(g => {
+      if (seen.has(g.id_geografico)) return false;
+      seen.add(g.id_geografico);
+      return true;
+    });
+    setDistritos(unicos);
+  }, [todaLaGeografia]);
 
   // Cargar recintos cuando cambia el distrito seleccionado
   useEffect(() => {
@@ -85,44 +100,6 @@ const Mesas = () => {
     }
     setBuscarCodigo('');
   }, [selectedRecinto]);
-
-  const cargarDistritos = async () => {
-    setCargando(prev => ({ ...prev, distritos: true }));
-    try {
-      const response = await fetch(`${API_URL}/geografico?tipo=Distrito`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (data.success && data.data.length > 0) {
-        const seen = new Set();
-        const unicos = data.data.filter(g => {
-          if (seen.has(g.id_geografico)) return false;
-          seen.add(g.id_geografico);
-          return true;
-        });
-        setDistritos(unicos);
-      } else {
-        // Fallback: cargar todo y deduplicar
-        const resp2 = await fetch(`${API_URL}/geografico`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data2 = await resp2.json();
-        if (data2.success) {
-          const seen = new Set();
-          const unicos = data2.data.filter(g => {
-            if (seen.has(g.id_geografico)) return false;
-            seen.add(g.id_geografico);
-            return true;
-          });
-          setDistritos(unicos);
-        }
-      }
-    } catch (error) {
-      console.error('Error al cargar distritos:', error);
-    } finally {
-      setCargando(prev => ({ ...prev, distritos: false }));
-    }
-  };
 
   const cargarTodaGeografia = async () => {
     try {
@@ -396,15 +373,10 @@ const Mesas = () => {
     (d.nombre_padre || '').toLowerCase().includes(buscarDistrito.toLowerCase())
   );
 
-  // Zonas = hijos directos del distrito seleccionado (sin importar tipo)
+  // Zonas = hijos directos del distrito seleccionado en el modal (sin importar tipo)
   const zonasDelModalDistrito = selectedModalDistrito
     ? todaLaGeografia.filter(g => String(g.fk_id_geografico) === String(selectedModalDistrito))
     : [];
-
-  // Nombre del distrito actualmente seleccionado en el filtro
-  const nombreDistritoSeleccionado = selectedDistrito
-    ? (distritos.find(d => String(d.id_geografico) === String(selectedDistrito))?.nombre || '')
-    : ''
 
   return (
     <div className="p-4 sm:p-6 md:p-8 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen font-sans">
@@ -458,69 +430,38 @@ const Mesas = () => {
           {/* Filtros y acciones */}
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex-1 max-w-lg">
+              <div className="flex-1">
                 <label className="block text-sm font-bold text-gray-700 mb-2">
                   Filtrar por Distrito
                 </label>
-                {/* Buscador con dropdown personalizado */}
-                <div className="relative">
-                  <div className="relative">
+                <div className="flex gap-2">
+                  {/* Buscador que filtra las opciones del select */}
+                  <div className="relative w-44 flex-shrink-0">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
-                      value={buscarDistrito || nombreDistritoSeleccionado}
-                      onChange={(e) => {
-                        setBuscarDistrito(e.target.value);
-                        if (selectedDistrito) setSelectedDistrito('');
-                        setShowDistritoDropdown(true);
-                      }}
-                      onFocus={() => {
-                        setBuscarDistrito('');
-                        setShowDistritoDropdown(true);
-                      }}
-                      onBlur={() => setTimeout(() => setShowDistritoDropdown(false), 160)}
-                      className="w-full pl-9 pr-8 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none text-sm"
-                      placeholder="Buscar o seleccionar distrito..."
+                      value={buscarDistrito}
+                      onChange={(e) => setBuscarDistrito(e.target.value)}
+                      className="w-full pl-9 pr-3 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none text-sm"
+                      placeholder="Buscar..."
                     />
-                    {selectedDistrito && (
-                      <button
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => { setSelectedDistrito(''); setBuscarDistrito(''); }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
                   </div>
-                  {showDistritoDropdown && (
-                    <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-white border-2 border-gray-200 rounded-xl shadow-xl max-h-52 overflow-y-auto">
-                      <button
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => { setSelectedDistrito(''); setBuscarDistrito(''); setShowDistritoDropdown(false); }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 border-b border-gray-100"
-                      >
-                        Todos los distritos
-                      </button>
+                  {/* Selector de distrito */}
+                  <div className="relative flex-1">
+                    <select
+                      value={selectedDistrito}
+                      onChange={(e) => { setSelectedDistrito(e.target.value); setBuscarDistrito(''); }}
+                      className="w-full pl-4 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none appearance-none"
+                    >
+                      <option value="">Todos los distritos</option>
                       {distritosFiltrados.map(d => (
-                        <button
-                          key={d.id_geografico}
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => { setSelectedDistrito(String(d.id_geografico)); setBuscarDistrito(''); setShowDistritoDropdown(false); }}
-                          className={`w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 transition-colors ${
-                            String(selectedDistrito) === String(d.id_geografico)
-                              ? 'bg-blue-50 text-[#1E3A8A] font-bold'
-                              : 'text-gray-700'
-                          }`}
-                        >
-                          <span className="font-medium">{d.nombre}</span>
-                          {d.nombre_padre && <span className="text-gray-400 text-xs ml-1">({d.nombre_padre})</span>}
-                        </button>
+                        <option key={d.id_geografico} value={d.id_geografico}>
+                          {d.nombre}{d.nombre_padre ? ` (${d.nombre_padre})` : ''}
+                        </option>
                       ))}
-                      {distritosFiltrados.length === 0 && (
-                        <div className="px-4 py-3 text-sm text-gray-400 text-center">Sin resultados</div>
-                      )}
-                    </div>
-                  )}
+                    </select>
+                    <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  </div>
                 </div>
               </div>
               <button
