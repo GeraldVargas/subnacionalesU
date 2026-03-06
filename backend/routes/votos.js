@@ -202,48 +202,72 @@ router.put('/recintos/:id', verificarToken, async (req, res) => {
     }
 });
 
-// DELETE /api/votos/recintos/:id - Eliminar recinto
+// DELETE /api/votos/recintos/:id - Eliminar recinto (cascade: mesas + actas + votos + imágenes)
 router.delete('/recintos/:id', verificarToken, async (req, res) => {
     const { id } = req.params;
+    const client = await pool.connect();
 
     try {
-        // Verificar si tiene mesas asociadas
-        const mesas = await pool.query(
-            'SELECT COUNT(*) as total FROM mesa WHERE id_recinto = $1',
-            [id]
-        );
+        await client.query('BEGIN');
 
-        if (parseInt(mesas.rows[0].total) > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'No se puede eliminar el recinto porque tiene mesas asociadas'
+        // Verificar que el recinto existe
+        const recintoCheck = await client.query(
+            'SELECT id_recinto FROM recinto WHERE id_recinto = $1', [id]
+        );
+        if (recintoCheck.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ success: false, message: 'Recinto no encontrado' });
+        }
+
+        // Obtener todas las mesas del recinto
+        const mesasRes = await client.query(
+            'SELECT id_mesa FROM mesa WHERE id_recinto = $1', [id]
+        );
+        const mesaIds = mesasRes.rows.map(r => r.id_mesa);
+
+        if (mesaIds.length > 0) {
+            // Obtener imágenes de actas para eliminar archivos
+            const imagenesRes = await client.query(
+                `SELECT imagen_url FROM acta WHERE id_mesa = ANY($1) AND imagen_url IS NOT NULL`,
+                [mesaIds]
+            );
+            // Eliminar votos de las actas de esas mesas
+            await client.query(
+                `DELETE FROM voto WHERE id_acta IN (SELECT id_acta FROM acta WHERE id_mesa = ANY($1))`,
+                [mesaIds]
+            );
+            // Eliminar actas de esas mesas
+            await client.query('DELETE FROM acta WHERE id_mesa = ANY($1)', [mesaIds]);
+            // Eliminar mesas
+            await client.query('DELETE FROM mesa WHERE id_recinto = $1', [id]);
+            // Eliminar archivos de imagen
+            imagenesRes.rows.forEach(row => {
+                try {
+                    const filePath = path.join(__dirname, '..', row.imagen_url);
+                    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+                } catch { /* ignorar errores de archivo */ }
             });
         }
 
-        const result = await pool.query(
-            'DELETE FROM recinto WHERE id_recinto = $1 RETURNING *',
-            [id]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Recinto no encontrado'
-            });
-        }
+        // Eliminar recinto
+        await client.query('DELETE FROM recinto WHERE id_recinto = $1', [id]);
+        await client.query('COMMIT');
 
         res.json({
             success: true,
-            message: 'Recinto eliminado exitosamente'
+            message: `Recinto eliminado junto con ${mesaIds.length} mesa(s) y sus actas`
         });
 
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Error al eliminar recinto:', error);
         res.status(500).json({
             success: false,
             message: 'Error al eliminar recinto',
             error: error.message
         });
+    } finally {
+        client.release();
     }
 });
 
@@ -378,44 +402,132 @@ router.put('/mesas/:id', verificarToken, async (req, res) => {
 router.delete('/mesas/:id', verificarToken, async (req, res) => {
     const { id } = req.params;
 
+    const client = await pool.connect();
     try {
-        // Verificar si tiene actas registradas
-        const actas = await pool.query(
-            'SELECT COUNT(*) as total FROM acta WHERE id_mesa = $1',
-            [id]
-        );
+        await client.query('BEGIN');
 
-        if (parseInt(actas.rows[0].total) > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'No se puede eliminar la mesa porque tiene actas registradas'
-            });
+        // Verificar que la mesa existe
+        const mesaCheck = await client.query('SELECT id_mesa FROM mesa WHERE id_mesa = $1', [id]);
+        if (mesaCheck.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ success: false, message: 'Mesa no encontrada' });
         }
 
-        const result = await pool.query(
-            'DELETE FROM mesa WHERE id_mesa = $1 RETURNING *',
-            [id]
+        // Obtener imágenes de actas para eliminar archivos
+        const imagenesRes = await client.query(
+            'SELECT imagen_url FROM acta WHERE id_mesa = $1 AND imagen_url IS NOT NULL', [id]
         );
+        // Eliminar votos de las actas de esta mesa
+        await client.query(
+            `DELETE FROM voto WHERE id_acta IN (SELECT id_acta FROM acta WHERE id_mesa = $1)`, [id]
+        );
+        // Eliminar actas de esta mesa
+        const actasRes = await client.query('DELETE FROM acta WHERE id_mesa = $1', [id]);
+        // Eliminar la mesa
+        await client.query('DELETE FROM mesa WHERE id_mesa = $1', [id]);
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Mesa no encontrada'
-            });
-        }
+        await client.query('COMMIT');
+
+        // Eliminar archivos de imagen
+        imagenesRes.rows.forEach(row => {
+            try {
+                const filePath = path.join(__dirname, '..', row.imagen_url);
+                if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+            } catch { /* ignorar errores de archivo */ }
+        });
 
         res.json({
             success: true,
-            message: 'Mesa eliminada exitosamente'
+            message: `Mesa eliminada junto con ${actasRes.rowCount} acta(s)`
         });
 
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Error al eliminar mesa:', error);
         res.status(500).json({
             success: false,
             message: 'Error al eliminar mesa',
             error: error.message
         });
+    } finally {
+        client.release();
+    }
+});
+
+// DELETE /api/votos/acta/:id - Eliminar una acta individual
+router.delete('/acta/:id', verificarToken, async (req, res) => {
+    const { id } = req.params;
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const actaCheck = await client.query('SELECT id_acta, imagen_url FROM acta WHERE id_acta = $1', [id]);
+        if (actaCheck.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ success: false, message: 'Acta no encontrada' });
+        }
+
+        const imagenUrl = actaCheck.rows[0].imagen_url;
+        await client.query('DELETE FROM voto WHERE id_acta = $1', [id]);
+        await client.query('DELETE FROM acta WHERE id_acta = $1', [id]);
+        await client.query('COMMIT');
+
+        if (imagenUrl) {
+            try {
+                const filePath = path.join(__dirname, '..', imagenUrl);
+                if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+            } catch { /* ignorar */ }
+        }
+
+        res.json({ success: true, message: 'Acta eliminada exitosamente' });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error al eliminar acta:', error);
+        res.status(500).json({ success: false, message: 'Error al eliminar acta', error: error.message });
+    } finally {
+        client.release();
+    }
+});
+
+// DELETE /api/votos/mesas/:id/actas - Eliminar todas las actas de una mesa
+router.delete('/mesas/:id/actas', verificarToken, async (req, res) => {
+    const { id } = req.params;
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const mesaCheck = await client.query('SELECT id_mesa FROM mesa WHERE id_mesa = $1', [id]);
+        if (mesaCheck.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ success: false, message: 'Mesa no encontrada' });
+        }
+
+        const imagenesRes = await client.query(
+            'SELECT imagen_url FROM acta WHERE id_mesa = $1 AND imagen_url IS NOT NULL', [id]
+        );
+        await client.query(
+            `DELETE FROM voto WHERE id_acta IN (SELECT id_acta FROM acta WHERE id_mesa = $1)`, [id]
+        );
+        const actasRes = await client.query('DELETE FROM acta WHERE id_mesa = $1', [id]);
+        await client.query('COMMIT');
+
+        imagenesRes.rows.forEach(row => {
+            try {
+                const filePath = path.join(__dirname, '..', row.imagen_url);
+                if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+            } catch { /* ignorar */ }
+        });
+
+        res.json({
+            success: true,
+            message: `${actasRes.rowCount} acta(s) eliminada(s) de la mesa`
+        });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error al eliminar actas de mesa:', error);
+        res.status(500).json({ success: false, message: 'Error al eliminar actas', error: error.message });
+    } finally {
+        client.release();
     }
 });
 
@@ -464,14 +576,14 @@ router.post('/registrar-acta', verificarToken, uploadActa.single('imagen_acta'),
     if (typeof votos_alcalde === 'string') {
         try {
             votos_alcalde = JSON.parse(votos_alcalde);
-        } catch (e) {
+        } catch {
             votos_alcalde = [];
         }
     }
     if (typeof votos_concejal === 'string') {
         try {
             votos_concejal = JSON.parse(votos_concejal);
-        } catch (e) {
+        } catch {
             votos_concejal = [];
         }
     }

@@ -24,7 +24,8 @@ import {
     Award,
     Target,
     Percent,
-    Download
+    Download,
+    Trash2
 } from 'lucide-react';
 
 const HistorialActas = () => {
@@ -175,6 +176,47 @@ const HistorialActas = () => {
         } catch (error) {
             console.error('Error al iniciar edición:', error);
             alert('Error al cargar datos para edición');
+        }
+    };
+
+    const eliminarActa = async (id_acta, codigo_mesa) => {
+        if (!window.confirm(`¿Eliminiar el acta de la mesa ${codigo_mesa}? Esta acción no se puede deshacer.`)) return;
+        try {
+            const response = await fetch(`${API_URL}/votos/acta/${id_acta}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                alert('Acta eliminada correctamente');
+                cargarActas();
+            } else {
+                alert('Error: ' + (data.message || 'No se pudo eliminar'));
+            }
+        } catch (error) {
+            console.error('Error al eliminar acta:', error);
+            alert('Error al eliminar el acta');
+        }
+    };
+
+    const eliminarTodasActasMesa = async (id_mesa, codigo_mesa) => {
+        if (!window.confirm(`¿Eliminar TODAS las actas de la mesa ${codigo_mesa}? Esta acción no se puede deshacer.`)) return;
+        try {
+            const response = await fetch(`${API_URL}/votos/mesas/${id_mesa}/actas`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                alert(data.message);
+                setMostrarDetalle(false);
+                cargarActas();
+            } else {
+                alert('Error: ' + (data.message || 'No se pudo eliminar'));
+            }
+        } catch (error) {
+            console.error('Error al eliminar actas:', error);
+            alert('Error al eliminar las actas');
         }
     };
 
@@ -552,6 +594,13 @@ const HistorialActas = () => {
                                                     <Edit className="w-4 h-4" />
                                                     Editar
                                                 </button>
+                                                <button
+                                                    onClick={() => eliminarActa(acta.id_acta, acta.codigo_mesa)}
+                                                    className="flex items-center gap-2 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition text-sm font-semibold"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                    Eliminar
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -579,12 +628,24 @@ const HistorialActas = () => {
                                         </p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => setMostrarDetalle(false)}
-                                    className="w-10 h-10 rounded-xl hover:bg-white/10 flex items-center justify-center transition"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => {
+                                            setMostrarDetalle(false);
+                                            eliminarTodasActasMesa(actaSeleccionada.acta.id_mesa, actaSeleccionada.acta.codigo_mesa);
+                                        }}
+                                        className="flex items-center gap-2 px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-200 rounded-lg transition text-sm font-semibold"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        Eliminar todas las actas de esta mesa
+                                    </button>
+                                    <button
+                                        onClick={() => setMostrarDetalle(false)}
+                                        className="w-10 h-10 rounded-xl hover:bg-white/10 flex items-center justify-center transition"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

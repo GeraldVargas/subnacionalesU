@@ -273,8 +273,11 @@ const Mesas = () => {
     }
   };
 
-  const eliminarRecinto = async (id) => {
-    if (!confirm('¿Estás seguro de eliminar este recinto?')) return;
+  const eliminarRecinto = async (id, nombre, totalMesas) => {
+    const msg = totalMesas > 0
+      ? `¿Eliminar el recinto "${nombre}"?\nEsto también eliminará sus ${totalMesas} mesa(s) y todas sus actas. No se puede deshacer.`
+      : `¿Eliminar el recinto "${nombre}"? Esta acción no se puede deshacer.`;
+    if (!confirm(msg)) return;
 
     try {
       const response = await fetch(`${API_URL}/votos/recintos/${id}`, {
@@ -297,8 +300,11 @@ const Mesas = () => {
     }
   };
 
-  const eliminarMesa = async (id) => {
-    if (!confirm('¿Estás seguro de eliminar esta mesa?')) return;
+  const eliminarMesa = async (id, codigo, totalActas) => {
+    const msg = totalActas > 0
+      ? `¿Eliminar la mesa "${codigo}"?\nEsto también eliminará sus ${totalActas} acta(s) registrada(s). No se puede deshacer.`
+      : `¿Eliminar la mesa "${codigo}"? Esta acción no se puede deshacer.`;
+    if (!confirm(msg)) return;
 
     try {
       const response = await fetch(`${API_URL}/votos/mesas/${id}`, {
@@ -466,7 +472,7 @@ const Mesas = () => {
                         <Edit2 className="w-4 h-4 text-[#F59E0B]" />
                       </button>
                       <button
-                        onClick={() => eliminarRecinto(recinto.id_recinto)}
+                        onClick={() => eliminarRecinto(recinto.id_recinto, recinto.nombre, recinto.cantidad_mesas)}
                         className="p-2 hover:bg-red-50 rounded-lg transition"
                       >
                         <Trash2 className="w-4 h-4 text-red-600" />
@@ -607,7 +613,7 @@ const Mesas = () => {
                         <span className="text-xs font-medium text-gray-600">Editar</span>
                       </button>
                       <button
-                        onClick={() => eliminarMesa(mesa.id_mesa)}
+                        onClick={() => eliminarMesa(mesa.id_mesa, mesa.codigo, mesa.actas_registradas)}
                         className="flex-1 p-2 hover:bg-red-50 rounded-lg transition flex items-center justify-center gap-2"
                       >
                         <Trash2 className="w-4 h-4 text-red-600" />
