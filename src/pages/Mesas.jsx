@@ -43,8 +43,9 @@ const Mesas = () => {
   const [todaLaGeografia, setTodaLaGeografia] = useState([]);
   const [selectedModalDistrito, setSelectedModalDistrito] = useState('');
   const [selectedModalZona, setSelectedModalZona] = useState('');
-  // Buscador de distrito en el panel de filtros
+  // Buscador y selección jerárquica del panel Recintos
   const [buscarDistrito, setBuscarDistrito] = useState('');
+  const [selectedZona, setSelectedZona] = useState(''); // zona seleccionada en el panel
 
   // Estados del formulario
   const [formRecinto, setFormRecinto] = useState({
@@ -86,10 +87,10 @@ const Mesas = () => {
     setDistritos(unicos);
   }, [todaLaGeografia]);
 
-  // Cargar recintos cuando cambia el distrito seleccionado
+  // Cargar recintos cuando cambia la zona seleccionada en el panel
   useEffect(() => {
     cargarRecintos();
-  }, [selectedDistrito]);
+  }, [selectedZona]);
 
   // Cargar mesas cuando cambia el recinto seleccionado
   useEffect(() => {
@@ -132,8 +133,8 @@ const Mesas = () => {
   const cargarRecintos = async () => {
     setCargando(prev => ({ ...prev, recintos: true }));
     try {
-      const url = selectedDistrito
-        ? `${API_URL}/votos/recintos?id_geografico=${selectedDistrito}`
+      const url = selectedZona
+        ? `${API_URL}/votos/recintos?id_geografico=${selectedZona}`
         : `${API_URL}/votos/recintos`;
 
       const response = await fetch(url, {
@@ -190,12 +191,12 @@ const Mesas = () => {
           id_geografico: item.id_geografico
         });
       } else {
-        setSelectedModalDistrito('');
-        setSelectedModalZona('');
+        setSelectedModalDistrito(String(selectedDistrito));
+        setSelectedModalZona(String(selectedZona));
         setFormRecinto({
           nombre: '',
           direccion: '',
-          id_geografico: ''
+          id_geografico: selectedZona || ''
         });
       }
     } else if (tipo === 'mesa') {
@@ -367,13 +368,18 @@ const Mesas = () => {
     (m.codigo || '').toLowerCase().includes(buscarCodigo.trim().toLowerCase())
   );
 
-  // Distritos filtrados por el buscador del panel de filtros
+  // Distritos filtrados por el buscador
   const distritosFiltrados = distritos.filter(d =>
     d.nombre.toLowerCase().includes(buscarDistrito.toLowerCase()) ||
     (d.nombre_padre || '').toLowerCase().includes(buscarDistrito.toLowerCase())
   );
 
-  // Zonas = hijos directos del distrito seleccionado en el modal (sin importar tipo)
+  // Zonas hijas del distrito seleccionado en el panel
+  const zonasPanelDistrito = selectedDistrito
+    ? todaLaGeografia.filter(g => String(g.fk_id_geografico) === String(selectedDistrito))
+    : [];
+
+  // Zonas hijas del distrito seleccionado en el MODAL
   const zonasDelModalDistrito = selectedModalDistrito
     ? todaLaGeografia.filter(g => String(g.fk_id_geografico) === String(selectedModalDistrito))
     : [];
@@ -427,117 +433,169 @@ const Mesas = () => {
       {/* Contenido - Recintos */}
       {activeTab === 'recintos' && (
         <div>
-          {/* Filtros y acciones */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-6">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex-1">
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Filtrar por Distrito
-                </label>
-                <div className="flex gap-2">
-                  {/* Buscador que filtra las opciones del select */}
-                  <div className="relative w-44 flex-shrink-0">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      value={buscarDistrito}
-                      onChange={(e) => setBuscarDistrito(e.target.value)}
-                      className="w-full pl-9 pr-3 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none text-sm"
-                      placeholder="Buscar..."
-                    />
-                  </div>
-                  {/* Selector de distrito */}
-                  <div className="relative flex-1">
-                    <select
-                      value={selectedDistrito}
-                      onChange={(e) => { setSelectedDistrito(e.target.value); setBuscarDistrito(''); }}
-                      className="w-full pl-4 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none appearance-none"
-                    >
-                      <option value="">Todos los distritos</option>
-                      {distritosFiltrados.map(d => (
-                        <option key={d.id_geografico} value={d.id_geografico}>
-                          {d.nombre}{d.nombre_padre ? ` (${d.nombre_padre})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                    <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  </div>
-                </div>
+          {/* Paso 1: Selector de Distrito + buscador */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-4">
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Paso 1 — Selecciona un Distrito
+            </label>
+            <div className="flex gap-2">
+              <div className="relative w-44 flex-shrink-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={buscarDistrito}
+                  onChange={(e) => setBuscarDistrito(e.target.value)}
+                  className="w-full pl-9 pr-3 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none text-sm"
+                  placeholder="Buscar..."
+                />
               </div>
-              <button
-                onClick={() => abrirModal('recinto')}
-                className="flex items-center gap-2 bg-gradient-to-r from-[#1E3A8A] to-[#152a63] hover:from-[#152a63] hover:to-[#0f1f4a] text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-              >
-                <Plus className="w-5 h-5" />
-                Nuevo Recinto
-              </button>
+              <div className="relative flex-1">
+                <select
+                  value={selectedDistrito}
+                  onChange={(e) => {
+                    setSelectedDistrito(e.target.value);
+                    setSelectedZona('');
+                    setBuscarDistrito('');
+                    setRecintos([]);
+                  }}
+                  className="w-full pl-4 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none appearance-none"
+                >
+                  <option value="">Selecciona un distrito...</option>
+                  {distritosFiltrados.map(d => (
+                    <option key={d.id_geografico} value={d.id_geografico}>
+                      {d.nombre}{d.nombre_padre ? ` (${d.nombre_padre})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              </div>
             </div>
           </div>
 
-          {/* Lista de Recintos */}
-          {cargando.recintos ? (
-            <div className="text-center py-12">
-              <RefreshCw className="w-12 h-12 text-[#1E3A8A] animate-spin mx-auto mb-4" />
-              <p className="text-gray-600">Cargando recintos...</p>
-            </div>
-          ) : recintos.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
-              <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">No hay recintos disponibles</p>
-              <p className="text-gray-500 text-sm mt-2">
-                Selecciona un distrito o crea un nuevo recinto
+          {/* Paso 2: Zonas del distrito */}
+          {selectedDistrito && (
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-4">
+              <p className="text-sm font-bold text-gray-700 mb-3">
+                Paso 2 — Selecciona una Zona
               </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {recintos.map(recinto => (
-                <div 
-                  key={recinto.id_recinto} 
-                  className="bg-white rounded-2xl shadow-lg border-l-4 border-[#1E3A8A] p-6 hover:shadow-xl transition-all transform hover:-translate-y-1"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-3 bg-[#1E3A8A] bg-opacity-10 rounded-xl">
-                        <Building2 className="w-6 h-6 text-[#1E3A8A]" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-[#1E3A8A] text-lg">{recinto.nombre}</h3>
-                        <p className="text-sm text-gray-600">{recinto.nombre_geografico}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {recinto.direccion && (
-                    <p className="text-sm text-gray-600 mb-4 flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-gray-400" />
-                      {recinto.direccion}
-                    </p>
-                  )}
-                  
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <div className="flex items-center gap-2">
-                      <Grid3x3 className="w-4 h-4 text-[#F59E0B]" />
-                      <span className="text-sm font-bold text-[#F59E0B]">
-                        {recinto.cantidad_mesas} mesas
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => abrirModal('recinto', recinto)}
-                        className="p-2 hover:bg-[#F59E0B] hover:bg-opacity-10 rounded-lg transition"
-                      >
-                        <Edit2 className="w-4 h-4 text-[#F59E0B]" />
-                      </button>
-                      <button
-                        onClick={() => eliminarRecinto(recinto.id_recinto, recinto.nombre, recinto.cantidad_mesas)}
-                        className="p-2 hover:bg-red-50 rounded-lg transition"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </button>
-                    </div>
-                  </div>
+              {zonasPanelDistrito.length === 0 ? (
+                <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 px-4 py-3 rounded-xl">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  Este distrito no tiene zonas registradas. Agrégalas en Geografía.
                 </div>
-              ))}
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {zonasPanelDistrito.map(z => (
+                    <button
+                      key={z.id_geografico}
+                      onClick={() => setSelectedZona(String(z.id_geografico) === selectedZona ? '' : String(z.id_geografico))}
+                      className={`px-4 py-2 rounded-xl font-semibold text-sm border-2 transition-all ${
+                        selectedZona === String(z.id_geografico)
+                          ? 'bg-[#1E3A8A] border-[#1E3A8A] text-white shadow-md'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-[#1E3A8A] hover:text-[#1E3A8A]'
+                      }`}
+                    >
+                      {z.nombre}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Paso 3: Recintos de la zona + botón crear */}
+          {selectedZona && (
+            <>
+              <div className="flex justify-between items-center mb-4">
+                <p className="text-sm font-bold text-gray-600">
+                  Recintos en: <span className="text-[#1E3A8A]">{zonasPanelDistrito.find(z => String(z.id_geografico) === selectedZona)?.nombre}</span>
+                </p>
+                <button
+                  onClick={() => abrirModal('recinto')}
+                  className="flex items-center gap-2 bg-gradient-to-r from-[#1E3A8A] to-[#152a63] hover:from-[#152a63] hover:to-[#0f1f4a] text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg"
+                >
+                  <Plus className="w-5 h-5" />
+                  Nuevo Recinto
+                </button>
+              </div>
+
+              {cargando.recintos ? (
+                <div className="text-center py-12">
+                  <RefreshCw className="w-12 h-12 text-[#1E3A8A] animate-spin mx-auto mb-4" />
+                  <p className="text-gray-600">Cargando recintos...</p>
+                </div>
+              ) : recintos.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
+                  <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600 text-lg">No hay recintos en esta zona</p>
+                  <p className="text-gray-500 text-sm mt-2">Crea el primer recinto con el botón de arriba</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {recintos.map(recinto => (
+                    <div
+                      key={recinto.id_recinto}
+                      className="bg-white rounded-2xl shadow-lg border-l-4 border-[#1E3A8A] p-6 hover:shadow-xl transition-all transform hover:-translate-y-1"
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-3 bg-[#1E3A8A] bg-opacity-10 rounded-xl">
+                            <Building2 className="w-6 h-6 text-[#1E3A8A]" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-[#1E3A8A] text-lg">{recinto.nombre}</h3>
+                            <p className="text-sm text-gray-600">{recinto.nombre_geografico}</p>
+                          </div>
+                        </div>
+                      </div>
+                      {recinto.direccion && (
+                        <p className="text-sm text-gray-600 mb-4 flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-gray-400" />
+                          {recinto.direccion}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <Grid3x3 className="w-4 h-4 text-[#F59E0B]" />
+                          <span className="text-sm font-bold text-[#F59E0B]">{recinto.cantidad_mesas} mesas</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => abrirModal('recinto', recinto)}
+                            className="p-2 hover:bg-[#F59E0B] hover:bg-opacity-10 rounded-lg transition"
+                          >
+                            <Edit2 className="w-4 h-4 text-[#F59E0B]" />
+                          </button>
+                          <button
+                            onClick={() => eliminarRecinto(recinto.id_recinto, recinto.nombre, recinto.cantidad_mesas)}
+                            className="p-2 hover:bg-red-50 rounded-lg transition"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Estado inicial sin distrito */}
+          {!selectedDistrito && (
+            <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-300">
+              <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-600 text-lg font-semibold">Selecciona un distrito</p>
+              <p className="text-gray-400 text-sm mt-1">para ver sus zonas y recintos</p>
+            </div>
+          )}
+
+          {/* Distrito seleccionado pero sin zona */}
+          {selectedDistrito && !selectedZona && zonasPanelDistrito.length > 0 && (
+            <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-300">
+              <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-600 text-lg font-semibold">Selecciona una zona</p>
+              <p className="text-gray-400 text-sm mt-1">para ver o crear recintos en esa zona</p>
             </div>
           )}
         </div>
