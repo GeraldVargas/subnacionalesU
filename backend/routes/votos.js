@@ -109,7 +109,8 @@ router.get('/recintos', verificarToken, async (req, res) => {
 
         const params = [];
         if (id_geografico) {
-            query += ` WHERE r.id_geografico = $1`;
+            // Filtrar directo (recinto enlazado a zona) O por hijos (recinto enlazado a zona hija del distrito)
+            query += ` WHERE (r.id_geografico = $1 OR r.id_geografico IN (SELECT id_geografico FROM geografico WHERE fk_id_geografico = $1))`;
             params.push(id_geografico);
         }
 

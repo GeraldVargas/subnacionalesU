@@ -39,6 +39,13 @@ const Mesas = () => {
   // Buscador por código (solo afecta a pestaña Mesas)
   const [buscarCodigo, setBuscarCodigo] = useState('');
 
+  // Zonas y selección jerárquica del modal de recinto
+  const [todasLasZonas, setTodasLasZonas] = useState([]);
+  const [selectedModalDistrito, setSelectedModalDistrito] = useState('');
+  const [selectedModalZona, setSelectedModalZona] = useState('');
+  // Buscador de distrito en el panel de filtros
+  const [buscarDistrito, setBuscarDistrito] = useState('');
+
   // Estados del formulario
   const [formRecinto, setFormRecinto] = useState({
     nombre: '',
@@ -60,6 +67,7 @@ const Mesas = () => {
   useEffect(() => {
     cargarDistritos();
     cargarTodosLosRecintos();
+    cargarTodasLasZonas();
   }, []);
 
   // Cargar recintos cuando cambia el distrito seleccionado
@@ -80,20 +88,52 @@ const Mesas = () => {
   const cargarDistritos = async () => {
     setCargando(prev => ({ ...prev, distritos: true }));
     try {
-      const response = await fetch(`${API_URL}/geografico`, {
+      const response = await fetch(`${API_URL}/geografico?tipo=Distrito`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-      if (data.success) {
-        const distritosData = data.data.filter(g =>
-          ['Distrito', 'Municipio', 'Ciudad'].includes(g.tipo)
-        );
-        setDistritos(distritosData.length > 0 ? distritosData : data.data);
+      if (data.success && data.data.length > 0) {
+        const seen = new Set();
+        const unicos = data.data.filter(g => {
+          if (seen.has(g.id_geografico)) return false;
+          seen.add(g.id_geografico);
+          return true;
+        });
+        setDistritos(unicos);
+      } else {
+        // Fallback: cargar todo y deduplicar
+        const resp2 = await fetch(`${API_URL}/geografico`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data2 = await resp2.json();
+        if (data2.success) {
+          const seen = new Set();
+          const unicos = data2.data.filter(g => {
+            if (seen.has(g.id_geografico)) return false;
+            seen.add(g.id_geografico);
+            return true;
+          });
+          setDistritos(unicos);
+        }
       }
     } catch (error) {
       console.error('Error al cargar distritos:', error);
     } finally {
       setCargando(prev => ({ ...prev, distritos: false }));
+    }
+  };
+
+  const cargarTodasLasZonas = async () => {
+    try {
+      const response = await fetch(`${API_URL}/geografico?tipo=Zona`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setTodasLasZonas(data.data);
+      }
+    } catch (error) {
+      console.error('Error al cargar zonas:', error);
     }
   };
 
@@ -156,16 +196,28 @@ const Mesas = () => {
 
     if (tipo === 'recinto') {
       if (item) {
+        // Detectar si id_geografico del recinto apunta a una Zona
+        const zonaExistente = todasLasZonas.find(z => String(z.id_geografico) === String(item.id_geografico));
+        if (zonaExistente) {
+          setSelectedModalDistrito(String(zonaExistente.fk_id_geografico || ''));
+          setSelectedModalZona(String(item.id_geografico));
+        } else {
+          // Enlazado directo a un distrito
+          setSelectedModalDistrito(String(item.id_geografico));
+          setSelectedModalZona('');
+        }
         setFormRecinto({
           nombre: item.nombre,
           direccion: item.direccion || '',
           id_geografico: item.id_geografico
         });
       } else {
+        setSelectedModalDistrito('');
+        setSelectedModalZona('');
         setFormRecinto({
           nombre: '',
           direccion: '',
-          id_geografico: selectedDistrito || ''
+          id_geografico: ''
         });
       }
     } else if (tipo === 'mesa') {
@@ -193,6 +245,8 @@ const Mesas = () => {
     setShowModal(false);
     setEditingItem(null);
     setModalType('');
+    setSelectedModalDistrito('');
+    setSelectedModalZona('');
     setFormRecinto({ nombre: '', direccion: '', id_geografico: '' });
     setFormMesa({ codigo: '', descripcion: '', numero_mesa: '', id_recinto: '' });
   };
@@ -335,6 +389,17 @@ const Mesas = () => {
     (m.codigo || '').toLowerCase().includes(buscarCodigo.trim().toLowerCase())
   );
 
+  // Distritos filtrados por el buscador del panel de filtros
+  const distritosFiltrados = distritos.filter(d =>
+    d.nombre.toLowerCase().includes(buscarDistrito.toLowerCase()) ||
+    (d.nombre_padre || '').toLowerCase().includes(buscarDistrito.toLowerCase())
+  );
+
+  // Zonas que pertenecen al distrito seleccionado en el modal
+  const zonasDelModalDistrito = selectedModalDistrito
+    ? todasLasZonas.filter(z => String(z.fk_id_geografico) === String(selectedModalDistrito))
+    : [];
+
   return (
     <div className="p-4 sm:p-6 md:p-8 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen font-sans">
       {/* Header */}
@@ -387,24 +452,38 @@ const Mesas = () => {
           {/* Filtros y acciones */}
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex-1 max-w-md">
+              <div className="flex-1">
                 <label className="block text-sm font-bold text-gray-700 mb-2">
                   Filtrar por Distrito
                 </label>
-                <div className="relative">
-                  <select
-                    value={selectedDistrito}
-                    onChange={(e) => setSelectedDistrito(e.target.value)}
-                    className="w-full pl-4 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none appearance-none"
-                  >
-                    <option value="">Todos los distritos</option>
-                    {distritos.map(d => (
-                      <option key={d.id_geografico} value={d.id_geografico}>
-                        {d.nombre}
-                      </option>
-                    ))}
-                  </select>
-                  <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <div className="flex gap-2">
+                  {/* Buscador de distrito */}
+                  <div className="relative w-44 flex-shrink-0">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={buscarDistrito}
+                      onChange={(e) => setBuscarDistrito(e.target.value)}
+                      className="w-full pl-9 pr-3 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none text-sm"
+                      placeholder="Buscar distrito..."
+                    />
+                  </div>
+                  {/* Selector de distrito */}
+                  <div className="relative flex-1">
+                    <select
+                      value={selectedDistrito}
+                      onChange={(e) => setSelectedDistrito(e.target.value)}
+                      className="w-full pl-4 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none appearance-none"
+                    >
+                      <option value="">Todos los distritos</option>
+                      {distritosFiltrados.map(d => (
+                        <option key={d.id_geografico} value={d.id_geografico}>
+                          {d.nombre}{d.nombre_padre ? ` (${d.nombre_padre})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  </div>
                 </div>
               </div>
               <button
@@ -685,23 +764,59 @@ const Mesas = () => {
                       placeholder="Ej: Av. Principal #123"
                     />
                   </div>
+                  {/* Paso 1: Seleccionar Distrito */}
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">
-                      Distrito <span className="text-[#F59E0B]">*</span>
+                      Paso 1 – Distrito <span className="text-[#F59E0B]">*</span>
                     </label>
                     <select
-                      value={formRecinto.id_geografico}
-                      onChange={(e) => setFormRecinto({ ...formRecinto, id_geografico: e.target.value })}
+                      value={selectedModalDistrito}
+                      onChange={(e) => {
+                        setSelectedModalDistrito(e.target.value);
+                        setSelectedModalZona('');
+                        setFormRecinto(prev => ({ ...prev, id_geografico: '' }));
+                      }}
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none"
                     >
                       <option value="">Selecciona un distrito...</option>
                       {distritos.map(d => (
                         <option key={d.id_geografico} value={d.id_geografico}>
-                          {d.nombre}
+                          {d.nombre}{d.nombre_padre ? ` (${d.nombre_padre})` : ''}
                         </option>
                       ))}
                     </select>
                   </div>
+
+                  {/* Paso 2: Seleccionar Zona (solo si hay distrito seleccionado) */}
+                  {selectedModalDistrito && (
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                        Paso 2 – Zona <span className="text-[#F59E0B]">*</span>
+                      </label>
+                      {zonasDelModalDistrito.length === 0 ? (
+                        <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 px-4 py-3 rounded-xl">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          No hay zonas registradas para este distrito. Agrégalas en Geografía.
+                        </div>
+                      ) : (
+                        <select
+                          value={selectedModalZona}
+                          onChange={(e) => {
+                            setSelectedModalZona(e.target.value);
+                            setFormRecinto(prev => ({ ...prev, id_geografico: e.target.value }));
+                          }}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1E3A8A] focus:outline-none"
+                        >
+                          <option value="">Selecciona una zona...</option>
+                          {zonasDelModalDistrito.map(z => (
+                            <option key={z.id_geografico} value={z.id_geografico}>
+                              {z.nombre}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
 
@@ -774,7 +889,7 @@ const Mesas = () => {
               </button>
               <button
                 onClick={modalType === 'recinto' ? guardarRecinto : guardarMesa}
-                disabled={loading}
+                disabled={loading || (modalType === 'recinto' && !formRecinto.id_geografico)}
                 className="flex-1 px-6 py-3 bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white rounded-xl font-bold hover:from-[#152a63] hover:to-[#0f1f4a] transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
