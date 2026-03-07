@@ -200,14 +200,9 @@ const Transcripcion = () => {
 
       if (data.success) {
         const distritosData = data.data.filter((g) =>
-          ['País', 'Ciudad', 'Municipio', 'Distrito'].includes(g.tipo)
+          g.tipo?.toLowerCase() === 'distrito'
         );
-
-        if (distritosData.length === 0) {
-          setDistritos(data.data);
-        } else {
-          setDistritos(distritosData);
-        }
+        setDistritos(distritosData);
       } else {
         console.error('Error en respuesta:', data);
         mostrarNotificacion('error', 'Error al cargar distritos');
