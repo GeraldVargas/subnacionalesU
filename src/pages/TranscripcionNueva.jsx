@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   X,
   MapPin,
+  Layers,
   Building2,
   Grid3x3,
   ChevronRight,
@@ -14,7 +15,8 @@ import {
   AlertCircle,
   ChevronLeft,
   Vote,
-  Camera
+  Camera,
+  Search
 } from 'lucide-react';
 
 // Componente VotoCard memoizado para evitar re-renders innecesarios
@@ -62,6 +64,7 @@ const Transcripcion = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState({
     distritos: false,
+    zonas: false,
     recintos: false,
     mesas: false,
     frentes: false
@@ -69,14 +72,22 @@ const Transcripcion = () => {
 
   // Estados para el wizard
   const [distritos, setDistritos] = useState([]);
+  const [zonas, setZonas] = useState([]);
   const [recintos, setRecintos] = useState([]);
   const [mesas, setMesas] = useState([]);
   const [frentes, setFrentes] = useState([]);
 
   // Selecciones
   const [selectedDistrito, setSelectedDistrito] = useState(null);
+  const [selectedZona, setSelectedZona] = useState(null);
   const [selectedRecinto, setSelectedRecinto] = useState(null);
   const [selectedMesa, setSelectedMesa] = useState(null);
+
+  // Búsqueda en cada paso
+  const [buscarDistrito, setBuscarDistrito] = useState('');
+  const [buscarZona, setBuscarZona] = useState('');
+  const [buscarRecinto, setBuscarRecinto] = useState('');
+  const [buscarMesa, setBuscarMesa] = useState('');
 
   // Votos (GUARDAR COMO STRING MIENTRAS SE ESCRIBE)
   const [votosAlcalde, setVotosAlcalde] = useState([]);
@@ -151,6 +162,33 @@ const Transcripcion = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showModal]);
+
+  const cargarZonas = async (distritoId) => {
+    setLoading((prev) => ({ ...prev, zonas: true }));
+    setZonas([]);
+    try {
+      const response = await fetch(`${API_URL}/geografico`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        const zonasData = data.data.filter(
+          (g) =>
+            String(g.fk_id_geografico) === String(distritoId) &&
+            g.tipo?.toLowerCase() === 'zona'
+        );
+        setZonas(zonasData);
+        if (zonasData.length === 0) {
+          mostrarNotificacion('info', 'No hay zonas disponibles para este distrito');
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar zonas:', error);
+      mostrarNotificacion('error', 'Error al cargar zonas');
+    } finally {
+      setLoading((prev) => ({ ...prev, zonas: false }));
+    }
+  };
 
   const cargarDistritos = async () => {
     setLoading((prev) => ({ ...prev, distritos: true }));
@@ -261,22 +299,40 @@ const Transcripcion = () => {
 
   const handleSelectDistrito = (distrito) => {
     setSelectedDistrito(distrito);
+    setSelectedZona(null);
     setSelectedRecinto(null);
     setSelectedMesa(null);
-    cargarRecintos(distrito.id_geografico);
+    setZonas([]);
+    setRecintos([]);
+    setBuscarZona('');
+    setBuscarRecinto('');
+    setBuscarMesa('');
+    cargarZonas(distrito.id_geografico);
     setCurrentStep(2);
+  };
+
+  const handleSelectZona = (zona) => {
+    setSelectedZona(zona);
+    setSelectedRecinto(null);
+    setSelectedMesa(null);
+    setRecintos([]);
+    setBuscarRecinto('');
+    setBuscarMesa('');
+    cargarRecintos(zona.id_geografico);
+    setCurrentStep(3);
   };
 
   const handleSelectRecinto = (recinto) => {
     setSelectedRecinto(recinto);
     setSelectedMesa(null);
+    setBuscarMesa('');
     cargarMesas(recinto.id_recinto);
-    setCurrentStep(3);
+    setCurrentStep(4);
   };
 
   const handleSelectMesa = (mesa) => {
     setSelectedMesa(mesa);
-    setCurrentStep(4);
+    setCurrentStep(5);
   };
 
   // IMPORTANTE: NO PARSEAR A NÚMERO AQUÍ (para que deje escribir varios dígitos)
@@ -382,8 +438,16 @@ const Transcripcion = () => {
   const resetForm = () => {
     setCurrentStep(1);
     setSelectedDistrito(null);
+    setSelectedZona(null);
     setSelectedRecinto(null);
     setSelectedMesa(null);
+    setZonas([]);
+    setRecintos([]);
+    setMesas([]);
+    setBuscarDistrito('');
+    setBuscarZona('');
+    setBuscarRecinto('');
+    setBuscarMesa('');
     setVotosNulos('');
     setVotosBlancos('');
     setObservaciones('');
@@ -447,15 +511,17 @@ const Transcripcion = () => {
           </p>
           <div className="flex flex-wrap justify-center gap-4 sm:gap-8">
             {[
-              { icon: MapPin, label: 'Paso 1', name: 'Distrito' },
-              { icon: Building2, label: 'Paso 2', name: 'Recinto' },
-              { icon: Grid3x3, label: 'Paso 3', name: 'Mesa' }
+              { icon: MapPin, label: 'Paso 1', name: 'Distrito', color: 'bg-[#1E3A8A]', text: 'text-[#1E3A8A]' },
+              { icon: Layers, label: 'Paso 2', name: 'Zona', color: 'bg-purple-500', text: 'text-purple-500' },
+              { icon: Building2, label: 'Paso 3', name: 'Recinto', color: 'bg-[#F59E0B]', text: 'text-[#F59E0B]' },
+              { icon: Grid3x3, label: 'Paso 4', name: 'Mesa', color: 'bg-[#10B981]', text: 'text-[#10B981]' },
+              { icon: Vote, label: 'Paso 5', name: 'Votos', color: 'bg-red-500', text: 'text-red-500' }
             ].map((item, idx) => {
               const Icon = item.icon;
               return (
                 <div key={idx} className="flex items-center gap-2 sm:gap-3">
-                  <div className={`w-8 h-8 sm:w-10 sm:h-10 ${idx === 0 ? 'bg-[#1E3A8A]' : idx === 1 ? 'bg-[#F59E0B]' : 'bg-[#10B981]'} bg-opacity-10 rounded-full flex items-center justify-center flex-shrink-0`}>
-                    <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${idx === 0 ? 'text-[#1E3A8A]' : idx === 1 ? 'text-[#F59E0B]' : 'text-[#10B981]'}`} />
+                  <div className={`w-8 h-8 sm:w-10 sm:h-10 ${item.color} bg-opacity-10 rounded-full flex items-center justify-center flex-shrink-0`}>
+                    <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${item.text}`} />
                   </div>
                   <div className="text-left hidden sm:block">
                     <p className="text-xs text-gray-500">{item.label}</p>
@@ -494,9 +560,10 @@ const Transcripcion = () => {
               <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-2">
                 {[
                   { num: 1, label: 'Distrito', icon: MapPin },
-                  { num: 2, label: 'Recinto', icon: Building2 },
-                  { num: 3, label: 'Mesa', icon: Grid3x3 },
-                  { num: 4, label: 'Votos', icon: Vote }
+                  { num: 2, label: 'Zona', icon: Layers },
+                  { num: 3, label: 'Recinto', icon: Building2 },
+                  { num: 4, label: 'Mesa', icon: Grid3x3 },
+                  { num: 5, label: 'Votos', icon: Vote }
                 ].map((step, idx) => (
                   <React.Fragment key={step.num}>
                     <div className="flex items-center flex-shrink-0">
@@ -515,9 +582,9 @@ const Transcripcion = () => {
                         {step.label}
                       </span>
                     </div>
-                    {idx < 3 && (
+                    {idx < 4 && (
                       <div
-                        className={`w-6 sm:w-12 h-0.5 mx-1 sm:mx-3 flex-shrink-0 ${
+                        className={`w-4 sm:w-8 h-0.5 mx-0.5 sm:mx-2 flex-shrink-0 ${
                           currentStep > step.num ? 'bg-[#F59E0B]' : 'bg-white/20'
                         }`}
                       />
@@ -540,6 +607,18 @@ const Transcripcion = () => {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Selecciona el Distrito</h3>
 
+                  {/* Buscador */}
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={buscarDistrito}
+                      onChange={(e) => setBuscarDistrito(e.target.value)}
+                      placeholder="Buscar distrito..."
+                      className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A] focus:outline-none"
+                    />
+                  </div>
+
                   {loading.distritos ? (
                     <div className="flex items-center justify-center py-12">
                       <div className="w-8 h-8 border-4 border-[#1E3A8A] border-t-transparent rounded-full animate-spin"></div>
@@ -550,30 +629,41 @@ const Transcripcion = () => {
                       <p className="text-gray-600">No hay distritos disponibles</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {distritos.map((distrito) => (
-                        <button
-                          key={distrito.id_geografico}
-                          onClick={() => handleSelectDistrito(distrito)}
-                          className="p-4 border border-gray-200 rounded-xl hover:border-[#1E3A8A] hover:bg-[#1E3A8A] hover:bg-opacity-5 transition-all text-left group"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-semibold text-gray-900 group-hover:text-[#1E3A8A]">
-                                {distrito.nombre}
-                              </p>
-                              <p className="text-xs text-gray-500 mt-0.5">{distrito.tipo}</p>
-                            </div>
-                            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#1E3A8A]" />
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                    (() => {
+                      const filtrados = distritos.filter((d) =>
+                        d.nombre.toLowerCase().includes(buscarDistrito.toLowerCase())
+                      );
+                      return filtrados.length === 0 ? (
+                        <div className="text-center py-8 bg-gray-50 rounded-xl">
+                          <p className="text-gray-500 text-sm">Sin resultados para "{buscarDistrito}"</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {filtrados.map((distrito) => (
+                            <button
+                              key={distrito.id_geografico}
+                              onClick={() => handleSelectDistrito(distrito)}
+                              className="p-4 border border-gray-200 rounded-xl hover:border-[#1E3A8A] hover:bg-[#1E3A8A] hover:bg-opacity-5 transition-all text-left group"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-semibold text-gray-900 group-hover:text-[#1E3A8A]">
+                                    {distrito.nombre}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-0.5">{distrito.tipo}</p>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#1E3A8A]" />
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
               )}
 
-              {/* Paso 2: Seleccionar Recinto */}
+              {/* Paso 2: Seleccionar Zona */}
               {currentStep === 2 && (
                 <div>
                   <button
@@ -584,10 +674,94 @@ const Transcripcion = () => {
                     Volver
                   </button>
 
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Selecciona el Recinto</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Selecciona la Zona</h3>
                   <p className="text-sm text-gray-500 mb-4">
                     Distrito: <span className="font-medium text-[#1E3A8A]">{selectedDistrito?.nombre}</span>
                   </p>
+
+                  {/* Buscador */}
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={buscarZona}
+                      onChange={(e) => setBuscarZona(e.target.value)}
+                      placeholder="Buscar zona..."
+                      className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {loading.zonas ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  ) : zonas.length === 0 ? (
+                    <div className="text-center py-12 bg-gray-50 rounded-xl">
+                      <Layers className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-600">No hay zonas en este distrito</p>
+                    </div>
+                  ) : (
+                    (() => {
+                      const filtradas = zonas.filter((z) =>
+                        z.nombre.toLowerCase().includes(buscarZona.toLowerCase())
+                      );
+                      return filtradas.length === 0 ? (
+                        <div className="text-center py-8 bg-gray-50 rounded-xl">
+                          <p className="text-gray-500 text-sm">Sin resultados para "{buscarZona}"</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {filtradas.map((zona) => (
+                            <button
+                              key={zona.id_geografico}
+                              onClick={() => handleSelectZona(zona)}
+                              className="p-4 border border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all text-left group"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-semibold text-gray-900 group-hover:text-purple-600">
+                                    {zona.nombre}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-0.5">{zona.tipo}</p>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-purple-500" />
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()
+                  )}
+                </div>
+              )}
+
+              {/* Paso 3: Seleccionar Recinto */}
+              {currentStep === 3 && (
+                <div>
+                  <button
+                    onClick={() => setCurrentStep(2)}
+                    className="flex items-center gap-2 text-[#1E3A8A] hover:text-[#152a63] font-medium text-sm mb-4"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Volver
+                  </button>
+
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Selecciona el Recinto</h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Zona: <span className="font-medium text-purple-600">{selectedZona?.nombre}</span>
+                  </p>
+
+                  {/* Buscador */}
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={buscarRecinto}
+                      onChange={(e) => setBuscarRecinto(e.target.value)}
+                      placeholder="Buscar recinto..."
+                      className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B] focus:outline-none"
+                    />
+                  </div>
 
                   {loading.recintos ? (
                     <div className="flex items-center justify-center py-12">
@@ -596,38 +770,50 @@ const Transcripcion = () => {
                   ) : recintos.length === 0 ? (
                     <div className="text-center py-12 bg-gray-50 rounded-xl">
                       <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-gray-600">No hay recintos en este distrito</p>
+                      <p className="text-gray-600">No hay recintos en esta zona</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {recintos.map((recinto) => (
-                        <button
-                          key={recinto.id_recinto}
-                          onClick={() => handleSelectRecinto(recinto)}
-                          className="w-full p-4 border border-gray-200 rounded-xl hover:border-[#F59E0B] hover:bg-[#F59E0B] hover:bg-opacity-5 transition-all text-left group"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-semibold text-gray-900 group-hover:text-[#F59E0B]">
-                                {recinto.nombre}
-                              </p>
-                              <p className="text-sm text-gray-500 mt-1">{recinto.direccion}</p>
-                              <p className="text-xs text-gray-400 mt-1">{recinto.cantidad_mesas} mesas disponibles</p>
-                            </div>
-                            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#F59E0B]" />
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                    (() => {
+                      const filtrados = recintos.filter((r) =>
+                        r.nombre.toLowerCase().includes(buscarRecinto.toLowerCase()) ||
+                        (r.direccion || '').toLowerCase().includes(buscarRecinto.toLowerCase())
+                      );
+                      return filtrados.length === 0 ? (
+                        <div className="text-center py-8 bg-gray-50 rounded-xl">
+                          <p className="text-gray-500 text-sm">Sin resultados para "{buscarRecinto}"</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {filtrados.map((recinto) => (
+                            <button
+                              key={recinto.id_recinto}
+                              onClick={() => handleSelectRecinto(recinto)}
+                              className="w-full p-4 border border-gray-200 rounded-xl hover:border-[#F59E0B] hover:bg-[#F59E0B] hover:bg-opacity-5 transition-all text-left group"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-semibold text-gray-900 group-hover:text-[#F59E0B]">
+                                    {recinto.nombre}
+                                  </p>
+                                  <p className="text-sm text-gray-500 mt-1">{recinto.direccion}</p>
+                                  <p className="text-xs text-gray-400 mt-1">{recinto.cantidad_mesas} mesas disponibles</p>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-[#F59E0B]" />
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
               )}
 
-              {/* Paso 3: Seleccionar Mesa */}
-              {currentStep === 3 && (
+              {/* Paso 4: Seleccionar Mesa */}
+              {currentStep === 4 && (
                 <div>
                   <button
-                    onClick={() => setCurrentStep(2)}
+                    onClick={() => setCurrentStep(3)}
                     className="flex items-center gap-2 text-[#1E3A8A] hover:text-[#152a63] font-medium text-sm mb-4"
                   >
                     <ChevronLeft className="w-4 h-4" />
@@ -639,6 +825,18 @@ const Transcripcion = () => {
                     Recinto: <span className="font-medium text-[#F59E0B]">{selectedRecinto?.nombre}</span>
                   </p>
 
+                  {/* Buscador */}
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={buscarMesa}
+                      onChange={(e) => setBuscarMesa(e.target.value)}
+                      placeholder="Buscar mesa..."
+                      className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981] focus:outline-none"
+                    />
+                  </div>
+
                   {loading.mesas ? (
                     <div className="flex items-center justify-center py-12">
                       <div className="w-8 h-8 border-4 border-[#1E3A8A] border-t-transparent rounded-full animate-spin"></div>
@@ -649,36 +847,48 @@ const Transcripcion = () => {
                       <p className="text-gray-600">No hay mesas en este recinto</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {mesas.map((mesa) => (
-                        <button
-                          key={mesa.id_mesa}
-                          onClick={() => handleSelectMesa(mesa)}
-                          className="p-4 border border-gray-200 rounded-xl hover:border-[#10B981] hover:bg-[#10B981] hover:bg-opacity-5 transition-all text-left group"
-                        >
-                          <div>
-                            <p className="font-semibold text-gray-900 group-hover:text-[#10B981]">
-                              Mesa {mesa.numero_mesa}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">{mesa.codigo}</p>
-                            {parseInt(mesa.actas_registradas) > 0 && (
-                              <p className="text-xs text-[#F59E0B] mt-2 font-medium">
-                                ⚠️ {mesa.actas_registradas} acta(s) registrada(s)
-                              </p>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                    (() => {
+                      const filtradas = mesas.filter((m) =>
+                        String(m.numero_mesa).includes(buscarMesa) ||
+                        (m.codigo || '').toLowerCase().includes(buscarMesa.toLowerCase())
+                      );
+                      return filtradas.length === 0 ? (
+                        <div className="text-center py-8 bg-gray-50 rounded-xl">
+                          <p className="text-gray-500 text-sm">Sin resultados para "{buscarMesa}"</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {filtradas.map((mesa) => (
+                            <button
+                              key={mesa.id_mesa}
+                              onClick={() => handleSelectMesa(mesa)}
+                              className="p-4 border border-gray-200 rounded-xl hover:border-[#10B981] hover:bg-[#10B981] hover:bg-opacity-5 transition-all text-left group"
+                            >
+                              <div>
+                                <p className="font-semibold text-gray-900 group-hover:text-[#10B981]">
+                                  Mesa {mesa.numero_mesa}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">{mesa.codigo}</p>
+                                {parseInt(mesa.actas_registradas) > 0 && (
+                                  <p className="text-xs text-[#F59E0B] mt-2 font-medium">
+                                    ⚠️ {mesa.actas_registradas} acta(s) registrada(s)
+                                  </p>
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()
                   )}
                 </div>
               )}
 
-              {/* Paso 4: Registrar Votos */}
-              {currentStep === 4 && (
+              {/* Paso 5: Registrar Votos */}
+              {currentStep === 5 && (
                 <div>
                   <button
-                    onClick={() => setCurrentStep(3)}
+                    onClick={() => setCurrentStep(4)}
                     className="flex items-center gap-2 text-[#1E3A8A] hover:text-[#152a63] font-medium text-sm mb-4"
                   >
                     <ChevronLeft className="w-4 h-4" />
@@ -686,14 +896,18 @@ const Transcripcion = () => {
                   </button>
 
                   <div className="bg-gradient-to-r from-[#1E3A8A] to-[#152a63] rounded-xl p-4 mb-6 text-white">
-                    <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                       <div>
                         <p className="text-white/70 text-xs font-medium mb-1">Distrito</p>
-                        <p className="font-semibold">{selectedDistrito?.nombre}</p>
+                        <p className="font-semibold truncate">{selectedDistrito?.nombre}</p>
+                      </div>
+                      <div>
+                        <p className="text-white/70 text-xs font-medium mb-1">Zona</p>
+                        <p className="font-semibold truncate">{selectedZona?.nombre}</p>
                       </div>
                       <div>
                         <p className="text-white/70 text-xs font-medium mb-1">Recinto</p>
-                        <p className="font-semibold">{selectedRecinto?.nombre}</p>
+                        <p className="font-semibold truncate">{selectedRecinto?.nombre}</p>
                       </div>
                       <div>
                         <p className="text-white/70 text-xs font-medium mb-1">Mesa</p>
