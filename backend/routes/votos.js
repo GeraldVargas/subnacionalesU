@@ -109,8 +109,26 @@ router.get('/recintos', verificarToken, async (req, res) => {
 
         const params = [];
         if (id_geografico) {
-            // Filtrar directo (recinto enlazado a zona) O por hijos (recinto enlazado a zona hija del distrito)
-            query += ` WHERE (r.id_geografico = $1 OR r.id_geografico IN (SELECT id_geografico FROM geografico WHERE fk_id_geografico = $1))`;
+            // Buscar recintos en el nodo seleccionado + todos sus descendientes (recursivo)
+            // Y también en todos sus ancestros — cubre el caso en que el recinto está
+            // vinculado a un nivel superior (asiento) y se filtra por zona/distrito hijo
+            query += ` WHERE r.id_geografico IN (
+                WITH RECURSIVE desc_geo AS (
+                    SELECT id_geografico, fk_id_geografico FROM geografico WHERE id_geografico = $1
+                    UNION ALL
+                    SELECT g.id_geografico, g.fk_id_geografico FROM geografico g
+                    INNER JOIN desc_geo dg ON g.fk_id_geografico = dg.id_geografico
+                ),
+                anc_geo AS (
+                    SELECT id_geografico, fk_id_geografico FROM geografico WHERE id_geografico = $1
+                    UNION ALL
+                    SELECT g.id_geografico, g.fk_id_geografico FROM geografico g
+                    INNER JOIN anc_geo ag ON g.id_geografico = ag.fk_id_geografico
+                )
+                SELECT id_geografico FROM desc_geo
+                UNION
+                SELECT id_geografico FROM anc_geo
+            )`;
             params.push(id_geografico);
         }
 
