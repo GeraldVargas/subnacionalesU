@@ -87,11 +87,6 @@ const Mesas = () => {
     setDistritos(unicos);
   }, [todaLaGeografia]);
 
-  // Cargar recintos cuando cambia la zona seleccionada en el panel
-  useEffect(() => {
-    cargarRecintos();
-  }, [selectedZona]);
-
   // Cargar mesas cuando cambia el recinto seleccionado
   useEffect(() => {
     if (selectedRecinto) {
@@ -130,18 +125,16 @@ const Mesas = () => {
     }
   };
 
-  const cargarRecintos = async () => {
+  // cargarRecintos recibe zonaId como param para evitar stale closure
+  const cargarRecintos = async (zonaId) => {
+    setRecintos([]); // limpiar antes para evitar flash de datos anteriores
+    if (!zonaId) return;
     setCargando(prev => ({ ...prev, recintos: true }));
     try {
-      const url = selectedZona
-        ? `${API_URL}/votos/recintos?id_geografico=${selectedZona}`
-        : `${API_URL}/votos/recintos`;
-
-      const response = await fetch(url, {
+      const response = await fetch(`${API_URL}/votos/recintos?id_geografico=${zonaId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-
       if (data.success) {
         setRecintos(data.data);
       }
@@ -254,7 +247,7 @@ const Mesas = () => {
       if (data.success) {
         alert('✅ ' + data.message);
         cerrarModal();
-        await cargarRecintos();
+        await cargarRecintos(selectedZona);
         await cargarTodosLosRecintos();
       } else {
         alert('❌ Error: ' + data.message);
@@ -322,7 +315,7 @@ const Mesas = () => {
 
       if (data.success) {
         alert('✅ ' + data.message);
-        await cargarRecintos();
+        await cargarRecintos(selectedZona);
         await cargarTodosLosRecintos();
       } else {
         alert('❌ Error: ' + data.message);
@@ -352,7 +345,7 @@ const Mesas = () => {
         if (selectedRecinto) {
           await cargarMesas(selectedRecinto);
         }
-        await cargarRecintos();
+        await cargarRecintos(selectedZona);
         await cargarTodosLosRecintos();
       } else {
         alert('❌ Error: ' + data.message);
@@ -485,19 +478,33 @@ const Mesas = () => {
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {zonasPanelDistrito.map(z => (
-                    <button
-                      key={z.id_geografico}
-                      onClick={() => setSelectedZona(String(z.id_geografico) === selectedZona ? '' : String(z.id_geografico))}
-                      className={`px-4 py-2 rounded-xl font-semibold text-sm border-2 transition-all ${
-                        selectedZona === String(z.id_geografico)
-                          ? 'bg-[#1E3A8A] border-[#1E3A8A] text-white shadow-md'
-                          : 'bg-white border-gray-200 text-gray-700 hover:border-[#1E3A8A] hover:text-[#1E3A8A]'
-                      }`}
-                    >
-                      {z.nombre}
-                    </button>
-                  ))}
+                  {zonasPanelDistrito.map(z => {
+                    const esSeleccionada = selectedZona === String(z.id_geografico);
+                    const estaCargando = esSeleccionada && cargando.recintos;
+                    return (
+                      <button
+                        key={z.id_geografico}
+                        onClick={() => {
+                          const nuevoId = esSeleccionada ? '' : String(z.id_geografico);
+                          setSelectedZona(nuevoId);
+                          cargarRecintos(nuevoId);
+                        }}
+                        disabled={estaCargando}
+                        className={`px-4 py-2.5 rounded-xl font-semibold text-sm border-2 transition-all flex items-center gap-2 ${
+                          esSeleccionada
+                            ? 'bg-[#1E3A8A] border-[#1E3A8A] text-white shadow-lg scale-105'
+                            : 'bg-white border-gray-200 text-gray-700 hover:border-[#1E3A8A] hover:text-[#1E3A8A] hover:shadow-md'
+                        }`}
+                      >
+                        {estaCargando ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : esSeleccionada ? (
+                          <CheckCircle className="w-3.5 h-3.5" />
+                        ) : null}
+                        {z.nombre}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
