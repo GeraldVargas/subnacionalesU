@@ -413,6 +413,14 @@ router.put('/mesas/:id', verificarToken, async (req, res) => {
     const { codigo, descripcion, numero_mesa, id_recinto } = req.body;
 
     try {
+        // Validar que id_recinto no sea null
+        if (!id_recinto) {
+            return res.status(400).json({
+                success: false,
+                message: 'El recinto es requerido. No se puede dejar una mesa sin recinto asignado'
+            });
+        }
+
         const result = await pool.query(`
             UPDATE mesa
             SET codigo = $1, descripcion = $2, numero_mesa = $3, id_recinto = $4
@@ -1070,7 +1078,7 @@ router.post('/acta/:id/aprobar', verificarToken, verificarRolPorId(1, 2), async 
     const id_usuario_aprobador = req.usuario.id_usuario;
 
     try {
-        // Verificar que el acta existe
+        // Verificar que el acta existe y obtener su estado actual
         const actaResult = await pool.query(
             'SELECT id_acta, estado_aprobacion FROM acta WHERE id_acta = $1',
             [id]
@@ -1080,6 +1088,23 @@ router.post('/acta/:id/aprobar', verificarToken, verificarRolPorId(1, 2), async 
             return res.status(404).json({
                 success: false,
                 message: 'Acta no encontrada'
+            });
+        }
+
+        const estado_actual = actaResult.rows[0].estado_aprobacion;
+
+        // Validar que el acta esté en estado pendiente antes de aprobar
+        if (estado_actual === 'aprobado') {
+            return res.status(409).json({
+                success: false,
+                message: 'El acta ya fue aprobada previamente'
+            });
+        }
+
+        if (estado_actual === 'rechazado') {
+            return res.status(409).json({
+                success: false,
+                message: 'El acta fue rechazada. Debe ser editada antes de poder aprobarla'
             });
         }
 
@@ -1122,7 +1147,7 @@ router.post('/acta/:id/rechazar', verificarToken, verificarRolPorId(1, 2), async
             });
         }
 
-        // Verificar que el acta existe
+        // Verificar que el acta existe y obtener su estado actual
         const actaResult = await pool.query(
             'SELECT id_acta, estado_aprobacion FROM acta WHERE id_acta = $1',
             [id]
@@ -1132,6 +1157,16 @@ router.post('/acta/:id/rechazar', verificarToken, verificarRolPorId(1, 2), async
             return res.status(404).json({
                 success: false,
                 message: 'Acta no encontrada'
+            });
+        }
+
+        const estado_actual = actaResult.rows[0].estado_aprobacion;
+
+        // Validar que el acta esté en estado pendiente o rechazado antes de rechazar
+        if (estado_actual === 'aprobado') {
+            return res.status(409).json({
+                success: false,
+                message: 'El acta ya fue aprobada y no puede ser rechazada. Solo actas pendientes pueden ser rechazadas'
             });
         }
 
@@ -1221,8 +1256,8 @@ router.get('/seguimiento', verificarToken, verificarRolPorId(1, 2), async (req, 
                     ELSE 'pendiente'
                 END as estado_mesa
             FROM mesa m
-            LEFT JOIN recinto r ON m.id_recinto = r.id_recinto
-            LEFT JOIN jerarquia j ON r.id_geografico = j.id_geografico
+            INNER JOIN recinto r ON m.id_recinto = r.id_recinto
+            INNER JOIN jerarquia j ON r.id_geografico = j.id_geografico
             LEFT JOIN acta a ON m.id_mesa = a.id_mesa
             LEFT JOIN delegado_mesa dm ON m.id_mesa = dm.id_mesa AND dm.activo = TRUE
             LEFT JOIN usuario ud ON dm.id_usuario = ud.id_usuario
