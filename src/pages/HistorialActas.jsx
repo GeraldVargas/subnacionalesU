@@ -25,8 +25,14 @@ import {
     Target,
     Percent,
     Download,
-    Trash2
+    Trash2,
+    XCircle,
+    ThumbsUp,
+    ThumbsDown,
+    Loader
 } from 'lucide-react';
+import ModalConfirmacion from '../components/ModalConfirmacion';
+import useModal from '../hooks/useModal';
 
 const HistorialActas = () => {
     const [actas, setActas] = useState([]);
@@ -39,7 +45,7 @@ const HistorialActas = () => {
     const [frentes, setFrentes] = useState([]);
     const [guardando, setGuardando] = useState(false);
     const [errorImagen, setErrorImagen] = useState(false);
-    
+
     // Estados para edición
     const [votosAlcalde, setVotosAlcalde] = useState([]);
     const [votosConcejal, setVotosConcejal] = useState([]);
@@ -47,8 +53,19 @@ const HistorialActas = () => {
     const [votosBlancos, setVotosBlancos] = useState(0);
     const [observaciones, setObservaciones] = useState('');
 
+    // Modal profesional
+    const { isOpen, modalConfig, cerrarModal, mostrarExito, mostrarError, mostrarAdvertencia } = useModal();
+
+    // Modal para aprobar/rechazar
+    const [modalAccion, setModalAccion] = useState({ open: false, tipo: '', acta: null });
+    const [motivoRechazo, setMotivoRechazo] = useState('');
+    const [procesandoAccion, setProcesandoAccion] = useState(false);
+
+    // Modal para eliminar
+    const [modalEliminar, setModalEliminar] = useState({ open: false, acta: null, tipo: '' });
+
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    // 🔥 IMPORTANTE: La URL base para archivos estáticos (sin /api)
+    // URL base para archivos estaticos (sin /api)
     const BASE_URL = API_URL.replace('/api', ''); // Elimina /api si existe
 
     const token = localStorage.getItem('token');
@@ -68,6 +85,16 @@ const HistorialActas = () => {
     const [miMesa, setMiMesa] = useState(null);
     const [miRecinto, setMiRecinto] = useState(null);
 
+    const getMesasAsignadas = () => {
+        if (!miMesa) return [];
+        return Array.isArray(miMesa) ? miMesa : [miMesa];
+    };
+
+    const getRecintosAsignados = () => {
+        if (!miRecinto) return [];
+        return Array.isArray(miRecinto) ? miRecinto : [miRecinto];
+    };
+
     const cargarActas = async () => {
         try {
             setLoading(true);
@@ -80,13 +107,17 @@ const HistorialActas = () => {
                 let actasFiltradas = data.data;
 
                 // Si es delegado, filtrar por su mesa
-                if (isDelegado && miMesa) {
-                    actasFiltradas = actasFiltradas.filter(a => a.id_mesa === miMesa.id_mesa);
+                if (isDelegado) {
+                    const mesasAsignadas = getMesasAsignadas();
+                    const mesaIds = new Set(mesasAsignadas.map(m => m.id_mesa));
+                    actasFiltradas = actasFiltradas.filter(a => mesaIds.has(a.id_mesa));
                 }
 
                 // Si es jefe, filtrar por su recinto
-                if (isJefe && miRecinto) {
-                    actasFiltradas = actasFiltradas.filter(a => a.id_recinto === miRecinto.id_recinto);
+                if (isJefe) {
+                    const recintosAsignados = getRecintosAsignados();
+                    const recintoIds = new Set(recintosAsignados.map(r => r.id_recinto));
+                    actasFiltradas = actasFiltradas.filter(a => recintoIds.has(a.id_recinto));
                 }
 
                 setActas(actasFiltradas);
@@ -135,17 +166,17 @@ const HistorialActas = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
-            
+
             if (data.success) {
                 setActaSeleccionada(data.data);
-                
+
                 if (frentes.length === 0) {
                     await cargarFrentes();
                 }
-                
+
                 const votosAlcaldeMap = new Map();
                 const votosConcejalesMap = new Map();
-                
+
                 data.data.votos.forEach(voto => {
                     if (voto.tipo_cargo === 'alcalde') {
                         votosAlcaldeMap.set(voto.id_frente, voto.cantidad);
@@ -153,87 +184,181 @@ const HistorialActas = () => {
                         votosConcejalesMap.set(voto.id_frente, voto.cantidad);
                     }
                 });
-                
+
                 const votosAlcaldeArray = frentes.map(f => ({
                     id_frente: f.id_frente,
                     cantidad: votosAlcaldeMap.get(f.id_frente) || 0
                 }));
-                
+
                 const votosConcejalArray = frentes.map(f => ({
                     id_frente: f.id_frente,
                     cantidad: votosConcejalesMap.get(f.id_frente) || 0
                 }));
-                
+
                 setVotosAlcalde(votosAlcaldeArray);
                 setVotosConcejal(votosConcejalArray);
                 setVotosNulos(parseInt(data.data.acta.votos_nulos) || 0);
                 setVotosBlancos(parseInt(data.data.acta.votos_blancos) || 0);
                 setObservaciones(data.data.acta.observaciones || '');
-                
+
                 setMostrarEdicion(true);
                 setMostrarDetalle(false);
             }
         } catch (error) {
-            console.error('Error al iniciar edición:', error);
-            alert('Error al cargar datos para edición');
+            console.error('Error al iniciar edicion:', error);
+            mostrarError('Error', 'Error al cargar datos para edicion.');
         }
     };
 
     const eliminarActa = async (id_acta, codigo_mesa) => {
-        if (!window.confirm(`¿Eliminiar el acta de la mesa ${codigo_mesa}? Esta acción no se puede deshacer.`)) return;
+        setModalEliminar({ open: true, acta: { id_acta, codigo_mesa }, tipo: 'individual' });
+    };
+
+    const confirmarEliminarActa = async () => {
+        const { acta, tipo } = modalEliminar;
+        setModalEliminar({ open: false, acta: null, tipo: '' });
+
         try {
-            const response = await fetch(`${API_URL}/votos/acta/${id_acta}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            let response;
+            if (tipo === 'individual') {
+                response = await fetch(`${API_URL}/votos/acta/${acta.id_acta}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } else {
+                response = await fetch(`${API_URL}/votos/mesas/${acta.id_mesa}/actas`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            }
+
             const data = await response.json();
             if (data.success) {
-                alert('Acta eliminada correctamente');
+                mostrarExito('Acta Eliminada', data.message || 'El acta ha sido eliminada correctamente.');
+                setMostrarDetalle(false);
                 cargarActas();
             } else {
-                alert('Error: ' + (data.message || 'No se pudo eliminar'));
+                mostrarError('Error', data.message || 'No se pudo eliminar el acta.');
             }
         } catch (error) {
             console.error('Error al eliminar acta:', error);
-            alert('Error al eliminar el acta');
+            mostrarError('Error', 'Error de conexion al eliminar el acta.');
         }
     };
 
     const eliminarTodasActasMesa = async (id_mesa, codigo_mesa) => {
-        if (!window.confirm(`¿Eliminar TODAS las actas de la mesa ${codigo_mesa}? Esta acción no se puede deshacer.`)) return;
+        setModalEliminar({ open: true, acta: { id_mesa, codigo_mesa }, tipo: 'todas' });
+    };
+
+    // Funciones de aprobar/rechazar
+    const handleAprobar = async () => {
+        if (!modalAccion.acta?.id_acta) return;
+
+        // Validar estado antes de intentar aprobar
+        if (modalAccion.acta.estado_aprobacion === 'aprobado') {
+            mostrarAdvertencia('Acta Ya Aprobada', 'Esta acta ya fue aprobada previamente.');
+            setModalAccion({ open: false, tipo: '', acta: null });
+            return;
+        }
+
+        if (modalAccion.acta.estado_aprobacion === 'rechazado') {
+            mostrarAdvertencia('Acta Rechazada', 'Esta acta fue rechazada. Debe ser editada antes de poder aprobarla.');
+            setModalAccion({ open: false, tipo: '', acta: null });
+            return;
+        }
+
         try {
-            const response = await fetch(`${API_URL}/votos/mesas/${id_mesa}/actas`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+            setProcesandoAccion(true);
+            const response = await fetch(`${API_URL}/votos/acta/${modalAccion.acta.id_acta}/aprobar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                }
             });
+
             const data = await response.json();
+
             if (data.success) {
-                alert(data.message);
-                setMostrarDetalle(false);
+                mostrarExito('Acta Aprobada', 'El acta ha sido aprobada correctamente.');
+                setModalAccion({ open: false, tipo: '', acta: null });
                 cargarActas();
             } else {
-                alert('Error: ' + (data.message || 'No se pudo eliminar'));
+                mostrarError('Error', data.message || 'No se pudo aprobar el acta.');
+                // Cerrar el modal también en caso de error
+                setModalAccion({ open: false, tipo: '', acta: null });
             }
         } catch (error) {
-            console.error('Error al eliminar actas:', error);
-            alert('Error al eliminar las actas');
+            mostrarError('Error', 'Error de conexion al aprobar.');
+            // Cerrar el modal en caso de error de conexión
+            setModalAccion({ open: false, tipo: '', acta: null });
+        } finally {
+            setProcesandoAccion(false);
+        }
+    };
+
+    const handleRechazar = async () => {
+        if (!modalAccion.acta?.id_acta || !motivoRechazo.trim()) {
+            mostrarError('Motivo Requerido', 'Debes ingresar el motivo del rechazo.');
+            return;
+        }
+
+        // Validar estado antes de intentar rechazar
+        if (modalAccion.acta.estado_aprobacion === 'aprobado') {
+            mostrarAdvertencia('Acta Ya Aprobada', 'Esta acta ya fue aprobada y no puede ser rechazada.');
+            setModalAccion({ open: false, tipo: '', acta: null });
+            setMotivoRechazo('');
+            return;
+        }
+
+        try {
+            setProcesandoAccion(true);
+            const response = await fetch(`${API_URL}/votos/acta/${modalAccion.acta.id_acta}/rechazar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ motivo: motivoRechazo })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                mostrarExito('Acta Rechazada', 'El acta ha sido rechazada. El delegado debera corregirla.');
+                setModalAccion({ open: false, tipo: '', acta: null });
+                setMotivoRechazo('');
+                cargarActas();
+            } else {
+                mostrarError('Error', data.message || 'No se pudo rechazar el acta.');
+                // Cerrar el modal también en caso de error
+                setModalAccion({ open: false, tipo: '', acta: null });
+                setMotivoRechazo('');
+            }
+        } catch (error) {
+            mostrarError('Error', 'Error de conexion al rechazar.');
+            // Cerrar el modal en caso de error de conexión
+            setModalAccion({ open: false, tipo: '', acta: null });
+            setMotivoRechazo('');
+        } finally {
+            setProcesandoAccion(false);
         }
     };
 
     const guardarEdicion = async () => {
         try {
             setGuardando(true);
-            
+
             const token = localStorage.getItem('token');
             if (!token) {
-                alert('No estás autenticado. Por favor inicia sesión.');
+                mostrarError('No Autenticado', 'Por favor inicia sesion nuevamente.');
                 return;
             }
 
             const votosAlcaldeFiltrados = votosAlcalde
                 .filter(v => v.cantidad > 0)
                 .map(v => ({ id_frente: v.id_frente, cantidad: v.cantidad }));
-                
+
             const votosConcejalFiltrados = votosConcejal
                 .filter(v => v.cantidad > 0)
                 .map(v => ({ id_frente: v.id_frente, cantidad: v.cantidad }));
@@ -256,15 +381,15 @@ const HistorialActas = () => {
             const data = await response.json();
 
             if (data.success) {
-                alert('Acta editada exitosamente');
+                mostrarExito('Acta Actualizada', 'Los cambios han sido guardados correctamente.');
                 setMostrarEdicion(false);
                 cargarActas();
             } else {
-                alert('Error: ' + (data.message || 'Error al guardar los cambios'));
+                mostrarError('Error', data.message || 'Error al guardar los cambios.');
             }
         } catch (error) {
-            console.error('Error al guardar edición:', error);
-            alert('Error al guardar los cambios');
+            console.error('Error al guardar edicion:', error);
+            mostrarError('Error', 'Error al guardar los cambios.');
         } finally {
             setGuardando(false);
         }
@@ -324,58 +449,76 @@ const HistorialActas = () => {
 
     // Recargar actas cuando se cargue la asignación
     useEffect(() => {
-        if (isDelegado && miMesa) {
+        const tieneMesasAsignadas = getMesasAsignadas().length > 0;
+        const tieneRecintosAsignados = getRecintosAsignados().length > 0;
+
+        if (isDelegado && tieneMesasAsignadas) {
             cargarActas();
-        } else if (isJefe && miRecinto) {
+        } else if (isJefe && tieneRecintosAsignados) {
             cargarActas();
         }
     }, [miMesa, miRecinto]);
 
     const actasFiltradas = actas.filter(acta => {
-        const coincideBusqueda = 
+        const coincideBusqueda =
             (acta.codigo_mesa || '').toLowerCase().includes(busqueda.toLowerCase()) ||
             (acta.nombre_recinto || '').toLowerCase().includes(busqueda.toLowerCase()) ||
             (acta.nombre_geografico || '').toLowerCase().includes(busqueda.toLowerCase());
-        
-        const coincideEstado = 
-            filtroEstado === 'todos' || 
-            acta.estado === filtroEstado;
-        
+
+        // Filtrar por estado_aprobacion
+        let coincideEstado = filtroEstado === 'todos';
+        if (filtroEstado === 'pendientes') {
+            // Solo mostrar actas que NO son aprobadas ni rechazadas
+            coincideEstado = acta.estado_aprobacion !== 'aprobado' && acta.estado_aprobacion !== 'rechazado';
+        } else if (filtroEstado === 'aprobadas') {
+            coincideEstado = acta.estado_aprobacion === 'aprobado';
+        } else if (filtroEstado === 'rechazadas') {
+            coincideEstado = acta.estado_aprobacion === 'rechazado';
+        }
+
         return coincideBusqueda && coincideEstado;
     });
 
     const estadisticas = {
         total: actas.length,
-        registradas: actas.filter(a => a.estado === 'registrada').length,
-        validadas: actas.filter(a => a.estado === 'validada').length,
-        rechazadas: actas.filter(a => a.estado === 'rechazada').length
+        pendientes: actas.filter(a => a.estado_aprobacion !== 'aprobado' && a.estado_aprobacion !== 'rechazado').length,
+        aprobadas: actas.filter(a => a.estado_aprobacion === 'aprobado').length,
+        rechazadas: actas.filter(a => a.estado_aprobacion === 'rechazado').length
     };
 
-    const getEstadoBadge = (estado) => {
+    const getEstadoBadge = (acta) => {
+        // Priorizar estado_aprobacion sobre estado
+        const estadoAprobacion = acta.estado_aprobacion || 'pendiente';
+
         const estados = {
-            registrada: { 
-                color: 'bg-[#1E3A8A] bg-opacity-10 text-[#1E3A8A] border border-[#1E3A8A] border-opacity-30', 
-                icon: Clock, 
-                label: 'Registrada' 
+            aprobado: {
+                color: 'bg-[#10B981] bg-opacity-10 text-[#10B981] border border-[#10B981] border-opacity-30',
+                icon: CheckCircle,
+                label: 'Aprobado'
             },
-            validada: { 
-                color: 'bg-[#10B981] bg-opacity-10 text-[#10B981] border border-[#10B981] border-opacity-30', 
-                icon: CheckCircle, 
-                label: 'Validada' 
+            rechazado: {
+                color: 'bg-red-50 text-red-700 border border-red-200',
+                icon: XCircle,
+                label: 'Rechazado'
             },
-            rechazada: { 
-                color: 'bg-red-50 text-red-700 border border-red-200', 
-                icon: AlertCircle, 
-                label: 'Rechazada' 
+            pendiente: {
+                color: 'bg-[#F59E0B] bg-opacity-10 text-[#F59E0B] border border-[#F59E0B] border-opacity-30',
+                icon: Clock,
+                label: 'Pendiente'
             },
-            pendiente: { 
-                color: 'bg-[#F59E0B] bg-opacity-10 text-[#F59E0B] border border-[#F59E0B] border-opacity-30', 
-                icon: Clock, 
-                label: 'Pendiente' 
+            registrada: {
+                color: 'bg-[#1E3A8A] bg-opacity-10 text-[#1E3A8A] border border-[#1E3A8A] border-opacity-30',
+                icon: Clock,
+                label: 'Registrada'
+            },
+            validada: {
+                color: 'bg-[#10B981] bg-opacity-10 text-[#10B981] border border-[#10B981] border-opacity-30',
+                icon: CheckCircle,
+                label: 'Validada'
             }
         };
-        
-        const config = estados[estado] || estados.registrada;
+
+        const config = estados[estadoAprobacion] || estados.pendiente;
         const IconComponent = config.icon;
         
         return (
@@ -393,7 +536,109 @@ const HistorialActas = () => {
 
     return (
         <div className="p-8 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
-            {/* Header con diseño mejorado */}
+            {/* Modal de Confirmacion */}
+            <ModalConfirmacion
+                isOpen={isOpen}
+                onClose={cerrarModal}
+                tipo={modalConfig.tipo}
+                titulo={modalConfig.titulo}
+                mensaje={modalConfig.mensaje}
+                botonTexto={modalConfig.botonTexto}
+            />
+
+            {/* Modal de Eliminar */}
+            {modalEliminar.open && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setModalEliminar({ open: false, acta: null, tipo: '' })} />
+                    <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+                        <div className="mx-auto w-16 h-16 rounded-full bg-red-50 border-2 border-red-200 flex items-center justify-center mb-4">
+                            <Trash2 className="w-8 h-8 text-red-500" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 text-center mb-3">
+                            Confirmar Eliminacion
+                        </h3>
+                        <p className="text-gray-600 text-center mb-6">
+                            {modalEliminar.tipo === 'individual'
+                                ? `Eliminar el acta de la mesa ${modalEliminar.acta?.codigo_mesa}? Esta accion no se puede deshacer.`
+                                : `Eliminar TODAS las actas de la mesa ${modalEliminar.acta?.codigo_mesa}? Esta accion no se puede deshacer.`
+                            }
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setModalEliminar({ open: false, acta: null, tipo: '' })}
+                                className="flex-1 py-3 px-4 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmarEliminarActa}
+                                className="flex-1 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition"
+                            >
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Aprobar/Rechazar */}
+            {modalAccion.open && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setModalAccion({ open: false, tipo: '', acta: null })} />
+                    <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6">
+                        <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+                            modalAccion.tipo === 'aprobar' ? 'bg-green-50 border-2 border-green-200' : 'bg-red-50 border-2 border-red-200'
+                        }`}>
+                            {modalAccion.tipo === 'aprobar' ? (
+                                <ThumbsUp className="w-8 h-8 text-green-500" />
+                            ) : (
+                                <ThumbsDown className="w-8 h-8 text-red-500" />
+                            )}
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
+                            {modalAccion.tipo === 'aprobar' ? 'Aprobar Acta' : 'Rechazar Acta'}
+                        </h3>
+                        <p className="text-gray-600 text-center mb-4">
+                            Mesa <strong>{modalAccion.acta?.codigo_mesa}</strong> - {modalAccion.acta?.nombre_recinto}
+                        </p>
+                        {modalAccion.tipo === 'rechazar' && (
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Motivo del Rechazo <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={motivoRechazo}
+                                    onChange={(e) => setMotivoRechazo(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                                    rows="3"
+                                    placeholder="Describe el motivo del rechazo..."
+                                />
+                            </div>
+                        )}
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => { setModalAccion({ open: false, tipo: '', acta: null }); setMotivoRechazo(''); }}
+                                className="flex-1 py-3 px-4 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition"
+                                disabled={procesandoAccion}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={modalAccion.tipo === 'aprobar' ? handleAprobar : handleRechazar}
+                                disabled={procesandoAccion || (modalAccion.tipo === 'rechazar' && !motivoRechazo.trim())}
+                                className={`flex-1 py-3 px-4 rounded-xl text-white font-semibold transition disabled:opacity-50 flex items-center justify-center gap-2 ${
+                                    modalAccion.tipo === 'aprobar' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+                                }`}
+                            >
+                                {procesandoAccion && <Loader className="w-4 h-4 animate-spin" />}
+                                {modalAccion.tipo === 'aprobar' ? 'Aprobar' : 'Rechazar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Header con diseno mejorado */}
             <div className="mb-8">
                 <div className="flex items-start gap-4">
                     <div className="w-14 h-14 bg-gradient-to-br from-[#1E3A8A] to-[#152a63] rounded-2xl shadow-lg flex items-center justify-center">
@@ -411,7 +656,7 @@ const HistorialActas = () => {
                 <div className="w-32 h-1 bg-gradient-to-r from-[#1E3A8A] to-[#F59E0B] rounded-full mt-4 ml-4"></div>
             </div>
 
-            {/* Estadísticas con diseño NGP */}
+            {/* Estadisticas con diseno NGP */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#1E3A8A] hover:shadow-xl transition-all">
                     <div className="flex items-center gap-3 mb-2">
@@ -428,23 +673,29 @@ const HistorialActas = () => {
                         <div className="p-2 bg-[#F59E0B] bg-opacity-10 rounded-lg">
                             <Clock className="w-5 h-5 text-[#F59E0B]" />
                         </div>
-                        <span className="text-gray-600 font-semibold">Registradas</span>
+                        <span className="text-gray-600 font-semibold">Pendientes</span>
                     </div>
-                    <p className="text-4xl font-black text-[#F59E0B]">{estadisticas.registradas}</p>
+                    <p className="text-4xl font-black text-[#F59E0B]">{estadisticas.pendientes}</p>
                 </div>
 
-               
-
-                <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#1E3A8A] hover:shadow-xl transition-all">
+                <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-[#10B981] hover:shadow-xl transition-all">
                     <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-[#1E3A8A] bg-opacity-10 rounded-lg">
-                            <TrendingUp className="w-5 h-5 text-[#1E3A8A]" />
+                        <div className="p-2 bg-[#10B981] bg-opacity-10 rounded-lg">
+                            <CheckCircle className="w-5 h-5 text-[#10B981]" />
                         </div>
-                        <span className="text-gray-600 font-semibold">Votos Totales</span>
+                        <span className="text-gray-600 font-semibold">Aprobadas</span>
                     </div>
-                    <p className="text-4xl font-black text-[#1E3A8A]">
-                        {actas.reduce((sum, a) => sum + (parseInt(a.votos_totales) || 0), 0).toLocaleString()}
-                    </p>
+                    <p className="text-4xl font-black text-[#10B981]">{estadisticas.aprobadas}</p>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-red-500 hover:shadow-xl transition-all">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-red-100 rounded-lg">
+                            <XCircle className="w-5 h-5 text-red-500" />
+                        </div>
+                        <span className="text-gray-600 font-semibold">Rechazadas</span>
+                    </div>
+                    <p className="text-4xl font-black text-red-500">{estadisticas.rechazadas}</p>
                 </div>
             </div>
 
@@ -463,7 +714,33 @@ const HistorialActas = () => {
                             />
                         </div>
                     </div>
-                 
+
+                    {/* Filtros por estado */}
+                    <div className="flex flex-wrap gap-2">
+                        {[
+                            { value: 'todos', label: 'Todas', count: estadisticas.total },
+                            { value: 'pendientes', label: 'Pendientes', count: estadisticas.pendientes },
+                            { value: 'aprobadas', label: 'Aprobadas', count: estadisticas.aprobadas },
+                            { value: 'rechazadas', label: 'Rechazadas', count: estadisticas.rechazadas }
+                        ].map(f => (
+                            <button
+                                key={f.value}
+                                onClick={() => setFiltroEstado(f.value)}
+                                className={`px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                                    filtroEstado === f.value
+                                        ? 'bg-[#1E3A8A] text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                            >
+                                {f.label}
+                                <span className={`px-1.5 py-0.5 rounded text-xs ${
+                                    filtroEstado === f.value ? 'bg-white/20' : 'bg-gray-200'
+                                }`}>
+                                    {f.count}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -576,31 +853,53 @@ const HistorialActas = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            {getEstadoBadge(acta.estado)}
+                                            {getEstadoBadge(acta)}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-1 flex-wrap">
                                                 <button
                                                     onClick={() => cargarDetalleActa(acta.id_acta)}
-                                                    className="flex items-center gap-2 px-3 py-2 bg-[#1E3A8A] bg-opacity-10 hover:bg-opacity-20 text-[#1E3A8A] rounded-lg transition text-sm font-semibold"
+                                                    className="flex items-center gap-1 px-2 py-1.5 bg-[#1E3A8A] bg-opacity-10 hover:bg-opacity-20 text-[#1E3A8A] rounded-lg transition text-xs font-semibold"
+                                                    title="Ver detalle"
                                                 >
-                                                    <Eye className="w-4 h-4" />
-                                                    Ver
+                                                    <Eye className="w-3.5 h-3.5" />
                                                 </button>
                                                 <button
                                                     onClick={() => iniciarEdicion(acta.id_acta)}
-                                                    className="flex items-center gap-2 px-3 py-2 bg-[#F59E0B] bg-opacity-10 hover:bg-opacity-20 text-[#F59E0B] rounded-lg transition text-sm font-semibold"
+                                                    className="flex items-center gap-1 px-2 py-1.5 bg-[#F59E0B] bg-opacity-10 hover:bg-opacity-20 text-[#F59E0B] rounded-lg transition text-xs font-semibold"
+                                                    title="Editar"
                                                 >
-                                                    <Edit className="w-4 h-4" />
-                                                    Editar
+                                                    <Edit className="w-3.5 h-3.5" />
                                                 </button>
-                                                <button
-                                                    onClick={() => eliminarActa(acta.id_acta, acta.codigo_mesa)}
-                                                    className="flex items-center gap-2 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition text-sm font-semibold"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                    Eliminar
-                                                </button>
+                                                {/* Botones de aprobar/rechazar solo si esta pendiente y no es delegado/jefe */}
+                                                {(acta.estado_aprobacion !== 'aprobado' && acta.estado_aprobacion !== 'rechazado')
+                                                  && !isDelegado && !isJefe && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => setModalAccion({ open: true, tipo: 'aprobar', acta })}
+                                                            className="flex items-center gap-1 px-2 py-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition text-xs font-semibold"
+                                                            title="Aprobar"
+                                                        >
+                                                            <ThumbsUp className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setModalAccion({ open: true, tipo: 'rechazar', acta })}
+                                                            className="flex items-center gap-1 px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition text-xs font-semibold"
+                                                            title="Rechazar"
+                                                        >
+                                                            <ThumbsDown className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {!isDelegado && !isJefe && (
+                                                    <button
+                                                        onClick={() => eliminarActa(acta.id_acta, acta.codigo_mesa)}
+                                                        className="flex items-center gap-1 px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition text-xs font-semibold"
+                                                        title="Eliminar"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

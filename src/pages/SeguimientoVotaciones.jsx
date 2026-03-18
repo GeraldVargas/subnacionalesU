@@ -34,6 +34,7 @@ const SeguimientoVotaciones = () => {
     const [mesaExpandida, setMesaExpandida] = useState(null);
     const [mesaDetalle, setMesaDetalle] = useState(null);
     const [loadingDetalle, setLoadingDetalle] = useState(false);
+    const [errorImagen, setErrorImagen] = useState(false);
 
     // Modal para aprobar/rechazar
     const [modalAccion, setModalAccion] = useState({ open: false, tipo: '', mesa: null });
@@ -78,6 +79,7 @@ const SeguimientoVotaciones = () => {
 
         try {
             setLoadingDetalle(true);
+            setErrorImagen(false);
             const response = await fetch(`${API_URL}/votos/acta/${idActa}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -113,7 +115,7 @@ const SeguimientoVotaciones = () => {
                 setMesas(prevMesas =>
                     prevMesas.map(mesa =>
                         mesa.id_mesa === modalAccion.mesa.id_mesa
-                            ? { ...mesa, estado_mesa: 'aprobado', estado_aprobacion: 'aprobado' }
+                            ? { ...mesa, estado_mesa: 'aprobado', estado_aprobacion: 'aprobado', ya_actualizado: true }
                             : mesa
                     )
                 );
@@ -130,14 +132,18 @@ const SeguimientoVotaciones = () => {
                 mostrarExito('Acta Aprobada', 'El acta ha sido aprobada correctamente.');
                 setModalAccion({ open: false, tipo: '', mesa: null });
 
-                // Recargar desde el servidor para confirmar
-                setTimeout(() => cargarSeguimiento(), 1000);
+                // Recargar desde el servidor después para confirmar y sincronizar
+                setTimeout(() => cargarSeguimiento(), 500);
             } else {
                 mostrarError('Error', data.message || 'No se pudo aprobar el acta');
+                // Cerrar modal también en caso de error
+                setModalAccion({ open: false, tipo: '', mesa: null });
             }
         } catch (error) {
             console.error('Error:', error);
             mostrarError('Error', 'Error de conexion al aprobar');
+            // Cerrar modal en caso de error
+            setModalAccion({ open: false, tipo: '', mesa: null });
         } finally {
             setProcesando(false);
         }
@@ -171,7 +177,8 @@ const SeguimientoVotaciones = () => {
                                 ...mesa,
                                 estado_mesa: 'rechazado',
                                 estado_aprobacion: 'rechazado',
-                                motivo_rechazo: motivoRechazo
+                                motivo_rechazo: motivoRechazo,
+                                ya_actualizado: true
                             }
                             : mesa
                     )
@@ -190,14 +197,20 @@ const SeguimientoVotaciones = () => {
                 setModalAccion({ open: false, tipo: '', mesa: null });
                 setMotivoRechazo('');
 
-                // Recargar desde el servidor para confirmar
-                setTimeout(() => cargarSeguimiento(), 1000);
+                // Recargar desde el servidor después para confirmar y sincronizar
+                setTimeout(() => cargarSeguimiento(), 500);
             } else {
                 mostrarError('Error', data.message || 'No se pudo rechazar el acta');
+                // Cerrar modal también en caso de error
+                setModalAccion({ open: false, tipo: '', mesa: null });
+                setMotivoRechazo('');
             }
         } catch (error) {
             console.error('Error:', error);
             mostrarError('Error', 'Error de conexion al rechazar');
+            // Cerrar modal en caso de error
+            setModalAccion({ open: false, tipo: '', mesa: null });
+            setMotivoRechazo('');
         } finally {
             setProcesando(false);
         }
@@ -226,12 +239,29 @@ const SeguimientoVotaciones = () => {
 
     // Filtrar mesas
     const mesasFiltradas = mesas.filter(mesa => {
-        // Filtro por estado
-        if (filtro === 'con_acta' && mesa.cantidad_actas === 0) return false;
-        if (filtro === 'sin_acta' && mesa.cantidad_actas > 0) return false;
-        if (filtro === 'pendientes' && mesa.estado_mesa !== 'pendiente') return false;
-        if (filtro === 'aprobadas' && mesa.estado_mesa !== 'aprobado') return false;
-        if (filtro === 'rechazadas' && mesa.estado_mesa !== 'rechazado') return false;
+        // Filtro por estado - Ser muy explícito
+        if (filtro === 'con_acta' && (mesa.cantidad_actas === 0 || !mesa.cantidad_actas)) return false;
+        if (filtro === 'sin_acta' && (mesa.cantidad_actas > 0 || mesa.cantidad_actas)) return false;
+
+        // Para pendientes: SOLO mostrar si NO es aprobado ni rechazado
+        if (filtro === 'pendientes') {
+            const estado = (mesa.estado_mesa || '').toLowerCase();
+            if (estado === 'aprobado' || estado === 'aprobada' ||
+                estado === 'rechazado' || estado === 'rechazada' ||
+                estado === 'approved' || estado === 'rejected') {
+                return false;
+            }
+        }
+
+        if (filtro === 'aprobadas') {
+            const estado = (mesa.estado_mesa || '').toLowerCase();
+            if (estado !== 'aprobado' && estado !== 'aprobada' && estado !== 'approved') return false;
+        }
+
+        if (filtro === 'rechazadas') {
+            const estado = (mesa.estado_mesa || '').toLowerCase();
+            if (estado !== 'rechazado' && estado !== 'rechazada' && estado !== 'rejected') return false;
+        }
 
         // Filtro por busqueda
         if (busqueda) {
@@ -409,12 +439,21 @@ const SeguimientoVotaciones = () => {
                             {/* Imagen del acta */}
                             {mesaDetalle.acta?.imagen_url && (
                                 <div>
-                                    <h4 className="font-bold text-gray-900 mb-3">Imagen del Acta</h4>
-                                    <img
-                                        src={`${BASE_URL}${mesaDetalle.acta.imagen_url}`}
-                                        alt="Acta"
-                                        className="w-full max-h-96 object-contain rounded-lg border"
-                                    />
+                                    <h4 className="font-bold text-gray-900 mb-3">📸 Imagen del Acta</h4>
+                                    {!errorImagen ? (
+                                        <img
+                                            src={`${BASE_URL}${mesaDetalle.acta.imagen_url}`}
+                                            alt="Acta"
+                                            className="w-full max-h-96 object-contain rounded-lg border border-gray-200 cursor-pointer hover:shadow-lg transition"
+                                            onClick={() => window.open(`${BASE_URL}${mesaDetalle.acta.imagen_url}`, '_blank')}
+                                            onError={() => setErrorImagen(true)}
+                                        />
+                                    ) : (
+                                        <div className="text-center py-8 bg-red-50 rounded-lg border border-red-200">
+                                            <p className="text-red-600 font-medium">No se pudo cargar la imagen</p>
+                                            <p className="text-xs text-gray-500 mt-1">La ruta podría estar incorrecta</p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -674,7 +713,7 @@ const SeguimientoVotaciones = () => {
                                                                 Ver Detalle
                                                             </button>
 
-                                                            {mesa.estado_mesa === 'pendiente' && (
+                                                            {mesa.estado_mesa !== 'aprobado' && mesa.estado_mesa !== 'rechazado' && (
                                                                 <>
                                                                     <button
                                                                         onClick={(e) => {

@@ -100,13 +100,13 @@ router.get('/delegado/votos-mi-mesa', verificarToken, async (req, res) => {
 // RUTAS PARA JEFE DE RECINTO
 // ============================================
 
-// GET /api/permisos/jefe/mi-recinto - Obtener el recinto asignado del jefe
+// GET /api/permisos/jefe/mi-recinto - Obtener los recintos asignados del jefe
 router.get('/jefe/mi-recinto', verificarToken, async (req, res) => {
     try {
         const id_usuario = req.usuario.id_usuario;
 
         const result = await pool.query(`
-            SELECT 
+            SELECT
                 jr.id_jefe_recinto,
                 jr.id_usuario,
                 jr.id_recinto,
@@ -115,51 +115,74 @@ router.get('/jefe/mi-recinto', verificarToken, async (req, res) => {
                 r.id_geografico,
                 g.nombre as distrito_nombre,
                 jr.fecha_asignacion,
-                jr.activo
+                jr.activo,
+                (SELECT COUNT(*) FROM mesa WHERE id_recinto = r.id_recinto) as total_mesas,
+                (SELECT COUNT(DISTINCT a.id_acta) FROM mesa m
+                 INNER JOIN acta a ON m.id_mesa = a.id_mesa
+                 WHERE m.id_recinto = r.id_recinto) as total_actas
             FROM jefe_recinto jr
             JOIN recinto r ON jr.id_recinto = r.id_recinto
             LEFT JOIN geografico g ON r.id_geografico = g.id_geografico
             WHERE jr.id_usuario = $1 AND jr.activo = TRUE
-            LIMIT 1
+            ORDER BY jr.fecha_asignacion DESC
         `, [id_usuario]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'No tienes un recinto asignado'
+                message: 'No tienes recintos asignados'
             });
         }
 
-        res.json({ success: true, data: result.rows[0] });
+        // Retornar array de recintos
+        res.json({ success: true, data: result.rows });
     } catch (error) {
-        console.error('Error al obtener recinto asignado:', error);
+        console.error('Error al obtener recintos asignados:', error);
         res.status(500).json({
             success: false,
-            message: 'Error al obtener recinto asignado',
+            message: 'Error al obtener recintos asignados',
             error: error.message
         });
     }
 });
 
-// GET /api/permisos/jefe/mesas-recinto - Ver mesas de su recinto
-router.get('/jefe/mesas-recinto', verificarToken, async (req, res) => {
+// GET /api/permisos/jefe/mesas-recinto/:id_recinto - Ver mesas de un recinto específico
+router.get('/jefe/mesas-recinto/:id_recinto', verificarToken, async (req, res) => {
     try {
         const id_usuario = req.usuario.id_usuario;
+        const { id_recinto } = req.params;
+
+        // Verificar que el jefe tiene acceso a este recinto
+        const accesoResult = await pool.query(`
+            SELECT id_jefe_recinto
+            FROM jefe_recinto
+            WHERE id_usuario = $1 AND id_recinto = $2 AND activo = TRUE
+        `, [id_usuario, id_recinto]);
+
+        if (accesoResult.rows.length === 0) {
+            return res.status(403).json({
+                success: false,
+                message: 'No tienes acceso a este recinto'
+            });
+        }
 
         const result = await pool.query(`
-            SELECT 
+            SELECT
                 m.id_mesa,
                 m.codigo,
                 m.descripcion,
                 m.numero_mesa,
                 m.id_recinto,
-                r.nombre as recinto_nombre
+                r.nombre as recinto_nombre,
+                (SELECT COUNT(*) FROM acta WHERE id_mesa = m.id_mesa) as cantidad_actas,
+                (SELECT estado_aprobacion FROM acta WHERE id_mesa = m.id_mesa ORDER BY fecha_registro DESC LIMIT 1) as estado_aprobacion,
+                (SELECT fecha_registro FROM acta WHERE id_mesa = m.id_mesa ORDER BY fecha_registro DESC LIMIT 1) as fecha_ultima_acta,
+                (SELECT votos_totales FROM acta WHERE id_mesa = m.id_mesa ORDER BY fecha_registro DESC LIMIT 1) as votos_totales
             FROM mesa m
             JOIN recinto r ON m.id_recinto = r.id_recinto
-            JOIN jefe_recinto jr ON r.id_recinto = jr.id_recinto
-            WHERE jr.id_usuario = $1 AND jr.activo = TRUE
+            WHERE m.id_recinto = $1
             ORDER BY m.numero_mesa ASC
-        `, [id_usuario]);
+        `, [id_recinto]);
 
         res.json({ success: true, data: result.rows });
     } catch (error) {
@@ -329,10 +352,10 @@ router.post('/asignar-jefe', verificarToken, async (req, res) => {
             });
         }
 
-        if (usuarioResult.rows[0].id_rol !== 3 && usuarioResult.rows[0].id_rol !== 4) {
+        if (usuarioResult.rows[0].id_rol !== 4) {
             return res.status(400).json({
                 success: false,
-                message: 'El usuario debe tener rol de Delegado de Mesa o Jefe de Recinto'
+                message: 'El usuario debe tener rol de Jefe de Recinto'
             });
         }
 
@@ -436,7 +459,8 @@ router.get('/jefes', verificarToken, async (req, res) => {
             FROM jefe_recinto jr
             JOIN usuario u ON jr.id_usuario = u.id_usuario
             JOIN recinto r ON jr.id_recinto = r.id_recinto
-            WHERE jr.activo = TRUE
+                        WHERE jr.activo = TRUE
+                            AND u.id_rol = 4
             ORDER BY jr.id_usuario, r.nombre
         `);
 

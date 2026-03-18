@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 // Layouts
 import DashboardLayout from './layouts/DashboardLayout';
 
-// Páginas
+// Paginas
 import Login from './pages/Login';
 import DashboardHome from './pages/DashboardHome';
 import Transcripcion from './pages/TranscripcionNueva';
@@ -18,6 +18,7 @@ import AsignarMesa from './pages/AsignarMesa';
 import AsignarRecinto from './pages/AsignarRecinto';
 import MiMesa from './pages/MiMesa';
 import MiRecinto from './pages/MiRecinto';
+import SeguimientoVotaciones from './pages/SeguimientoVotaciones';
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
           <Route path="mi-recinto" element={<MiRecinto />} />
           <Route path="transcripcion" element={<Transcripcion />} />
           <Route path="historial" element={<HistorialActas />} />
+          <Route path="seguimiento" element={<SeguimientoVotaciones />} />
           <Route path="usuarios" element={<GestionUsuarios />} />
           <Route path="asignar-mesa" element={<AsignarMesa />} />
           <Route path="asignar-recinto" element={<AsignarRecinto />} />
@@ -45,7 +47,7 @@ function App() {
 
           <Route path="partidos" element={<FrentesPoliticos />} />
           <Route path="resultados" element={<ResultadosEnVivo />} />
-          <Route path="supervision" element={<div className="p-10"> Página de Supervisión</div>} />
+          <Route path="supervision" element={<div className="p-10"> Pagina de Supervision</div>} />
 
         </Route>
 
