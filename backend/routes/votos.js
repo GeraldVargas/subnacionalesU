@@ -1,6 +1,6 @@
 import express from 'express';
 import pool from '../database.js';
-import { verificarToken } from '../middleware/auth.js';
+import { verificarToken, verificarRolPorId } from '../middleware/auth.js';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -46,8 +46,8 @@ const uploadActa = multer({
 // GET /api/votos - Obtener todos los registros de votos
 router.get('/', verificarToken, async (req, res) => {
     try {
-        const result = await pool.query(`
-            SELECT 
+        const baseQuery = `
+            SELECT
                 a.id_acta,
                 a.id_mesa,
                 a.fecha_registro,
@@ -59,20 +59,46 @@ router.get('/', verificarToken, async (req, res) => {
                 a.editada,
                 a.fecha_ultima_edicion,
                 a.imagen_url,
+                a.estado_aprobacion,
+                a.motivo_rechazo,
+                a.fecha_aprobacion,
+                a.id_usuario_aprobador,
                 m.codigo as codigo_mesa,
                 m.numero_mesa,
                 r.nombre as nombre_recinto,
                 g.nombre as nombre_geografico,
                 u.nombre_usuario,
+                ua.nombre_usuario as usuario_aprobador,
                 te.nombre as tipo_eleccion
             FROM acta a
             INNER JOIN mesa m ON a.id_mesa = m.id_mesa
             LEFT JOIN recinto r ON m.id_recinto = r.id_recinto
             LEFT JOIN geografico g ON m.id_geografico = g.id_geografico
             LEFT JOIN usuario u ON a.id_usuario = u.id_usuario
+            LEFT JOIN usuario ua ON a.id_usuario_aprobador = ua.id_usuario
             LEFT JOIN tipo_eleccion te ON a.id_tipo_eleccion = te.id_tipo_eleccion
-            ORDER BY a.fecha_registro DESC
-        `);
+        `;
+
+        let query = baseQuery;
+        let params = [];
+
+        if (req.usuario.id_rol === 3) {
+            query += `
+                INNER JOIN delegado_mesa dm ON dm.id_mesa = a.id_mesa AND dm.id_usuario = $1 AND dm.activo = TRUE
+                ORDER BY a.fecha_registro DESC
+            `;
+            params = [req.usuario.id_usuario];
+        } else if (req.usuario.id_rol === 4) {
+            query += `
+                INNER JOIN jefe_recinto jr ON jr.id_recinto = m.id_recinto AND jr.id_usuario = $1 AND jr.activo = TRUE
+                ORDER BY a.fecha_registro DESC
+            `;
+            params = [req.usuario.id_usuario];
+        } else {
+            query += ` ORDER BY a.fecha_registro DESC`;
+        }
+
+        const result = await pool.query(query, params);
 
         res.json({
             success: true,
@@ -644,6 +670,22 @@ router.post('/registrar-acta', verificarToken, uploadActa.single('imagen_acta'),
             throw new Error('La mesa seleccionada no existe');
         }
 
+        // Verificar si ya existe un acta para esta mesa
+        const actaExistente = await client.query(
+            'SELECT id_acta, estado_aprobacion, fecha_registro FROM acta WHERE id_mesa = $1',
+            [id_mesa]
+        );
+
+        if (actaExistente.rows.length > 0) {
+            await client.query('ROLLBACK');
+            return res.status(409).json({
+                success: false,
+                existe: true,
+                message: 'Ya existe un acta registrada para esta mesa',
+                data: actaExistente.rows[0]
+            });
+        }
+
         // Calcular totales
         const votosValidosAlcalde = votos_alcalde?.reduce((sum, v) => sum + (parseInt(v.cantidad) || 0), 0) || 0;
         const votosValidosConcejal = votos_concejal?.reduce((sum, v) => sum + (parseInt(v.cantidad) || 0), 0) || 0;
@@ -733,9 +775,9 @@ router.post('/registrar-acta', verificarToken, uploadActa.single('imagen_acta'),
 });
 
 // PUT /api/votos/acta/:id - Editar un acta existente
-router.put('/acta/:id', verificarToken, async (req, res) => {
+router.put('/acta/:id', verificarToken, uploadActa.single('imagen_acta'), async (req, res) => {
     const { id } = req.params;
-    const {
+    let {
         votos_nulos,
         votos_blancos,
         observaciones,
@@ -743,6 +785,22 @@ router.put('/acta/:id', verificarToken, async (req, res) => {
         votos_concejal,
         estado
     } = req.body;
+
+    // Parsear JSON strings si vienen de FormData
+    if (typeof votos_alcalde === 'string') {
+        try {
+            votos_alcalde = JSON.parse(votos_alcalde);
+        } catch {
+            votos_alcalde = [];
+        }
+    }
+    if (typeof votos_concejal === 'string') {
+        try {
+            votos_concejal = JSON.parse(votos_concejal);
+        } catch {
+            votos_concejal = [];
+        }
+    }
 
     const client = await pool.connect();
 
@@ -757,6 +815,21 @@ router.put('/acta/:id', verificarToken, async (req, res) => {
 
         if (actaExistente.rows.length === 0) {
             throw new Error('Acta no encontrada');
+        }
+
+        // Obtener URL de la nueva imagen si fue subida
+        let imagen_url = actaExistente.rows[0].imagen_url; // Mantener la imagen anterior por defecto
+
+        if (req.file) {
+            // Si hay nueva imagen, eliminar la imagen anterior si existe
+            if (imagen_url) {
+                const oldImagePath = path.join(__dirname, '..', imagen_url);
+                if (fs.existsSync(oldImagePath)) {
+                    fs.unlinkSync(oldImagePath);
+                }
+            }
+            // Guardar la nueva imagen
+            imagen_url = `/uploads/actas/${req.file.filename}`;
         }
 
         // Calcular totales
@@ -774,9 +847,14 @@ router.put('/acta/:id', verificarToken, async (req, res) => {
                 votos_blancos = $4,
                 observaciones = $5,
                 estado = COALESCE($6, estado),
+                imagen_url = $7,
                 editada = TRUE,
-                fecha_ultima_edicion = CURRENT_TIMESTAMP
-            WHERE id_acta = $7
+                fecha_ultima_edicion = CURRENT_TIMESTAMP,
+                estado_aprobacion = 'pendiente',
+                motivo_rechazo = NULL,
+                fecha_aprobacion = NULL,
+                id_usuario_aprobador = NULL
+            WHERE id_acta = $8
         `, [
             votosTotales,
             votosValidos,
@@ -784,6 +862,7 @@ router.put('/acta/:id', verificarToken, async (req, res) => {
             parseInt(votos_blancos) || 0,
             observaciones || null,
             estado,
+            imagen_url,
             id
         ]);
 
@@ -847,24 +926,38 @@ router.get('/acta/:id', verificarToken, async (req, res) => {
     const { id } = req.params;
 
     try {
+        let filtroAcceso = '';
+        const params = [id];
+
+        if (req.usuario.id_rol === 3) {
+            filtroAcceso = ' AND EXISTS (SELECT 1 FROM delegado_mesa dm WHERE dm.id_mesa = a.id_mesa AND dm.id_usuario = $2 AND dm.activo = TRUE)';
+            params.push(req.usuario.id_usuario);
+        } else if (req.usuario.id_rol === 4) {
+            filtroAcceso = ' AND EXISTS (SELECT 1 FROM jefe_recinto jr WHERE jr.id_recinto = m.id_recinto AND jr.id_usuario = $2 AND jr.activo = TRUE)';
+            params.push(req.usuario.id_usuario);
+        }
+
         // Obtener información del acta
         const actaResult = await pool.query(`
-            SELECT 
+            SELECT
                 a.*,
                 m.codigo as codigo_mesa,
                 m.numero_mesa,
                 r.nombre as nombre_recinto,
                 g.nombre as nombre_geografico,
                 u.nombre_usuario,
+                ua.nombre_usuario as usuario_aprobador,
                 te.nombre as tipo_eleccion
             FROM acta a
             INNER JOIN mesa m ON a.id_mesa = m.id_mesa
             LEFT JOIN recinto r ON m.id_recinto = r.id_recinto
             LEFT JOIN geografico g ON m.id_geografico = g.id_geografico
             LEFT JOIN usuario u ON a.id_usuario = u.id_usuario
+            LEFT JOIN usuario ua ON a.id_usuario_aprobador = ua.id_usuario
             LEFT JOIN tipo_eleccion te ON a.id_tipo_eleccion = te.id_tipo_eleccion
             WHERE a.id_acta = $1
-        `, [id]);
+            ${filtroAcceso}
+        `, params);
 
         if (actaResult.rows.length === 0) {
             return res.status(404).json({
@@ -967,6 +1060,206 @@ router.get('/resultados-vivo', async (req, res) => {
             success: false,
             message: 'Error al obtener resultados',
             error: error.message
+        });
+    }
+});
+
+// POST /api/votos/acta/:id/aprobar - Aprobar un acta
+router.post('/acta/:id/aprobar', verificarToken, verificarRolPorId(1, 2), async (req, res) => {
+    const { id } = req.params;
+    const id_usuario_aprobador = req.usuario.id_usuario;
+
+    try {
+        // Verificar que el acta existe
+        const actaResult = await pool.query(
+            'SELECT id_acta, estado_aprobacion FROM acta WHERE id_acta = $1',
+            [id]
+        );
+
+        if (actaResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Acta no encontrada'
+            });
+        }
+
+        // Actualizar estado a aprobado
+        await pool.query(`
+            UPDATE acta
+            SET estado_aprobacion = 'aprobado',
+                fecha_aprobacion = CURRENT_TIMESTAMP,
+                id_usuario_aprobador = $1,
+                motivo_rechazo = NULL
+            WHERE id_acta = $2
+        `, [id_usuario_aprobador, id]);
+
+        res.json({
+            success: true,
+            message: 'Acta aprobada exitosamente'
+        });
+
+    } catch (error) {
+        console.error('Error al aprobar acta:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al aprobar acta: ' + error.message
+        });
+    }
+});
+
+// POST /api/votos/acta/:id/rechazar - Rechazar un acta
+router.post('/acta/:id/rechazar', verificarToken, verificarRolPorId(1, 2), async (req, res) => {
+    const { id } = req.params;
+    const { motivo } = req.body;
+    const id_usuario_aprobador = req.usuario.id_usuario;
+
+    try {
+        // Validar que se proporcione un motivo
+        if (!motivo || motivo.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                message: 'El motivo de rechazo es obligatorio'
+            });
+        }
+
+        // Verificar que el acta existe
+        const actaResult = await pool.query(
+            'SELECT id_acta, estado_aprobacion FROM acta WHERE id_acta = $1',
+            [id]
+        );
+
+        if (actaResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Acta no encontrada'
+            });
+        }
+
+        // Actualizar estado a rechazado
+        await pool.query(`
+            UPDATE acta
+            SET estado_aprobacion = 'rechazado',
+                motivo_rechazo = $1,
+                fecha_aprobacion = CURRENT_TIMESTAMP,
+                id_usuario_aprobador = $2
+            WHERE id_acta = $3
+        `, [motivo, id_usuario_aprobador, id]);
+
+        res.json({
+            success: true,
+            message: 'Acta rechazada exitosamente'
+        });
+
+    } catch (error) {
+        console.error('Error al rechazar acta:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al rechazar acta: ' + error.message
+        });
+    }
+});
+
+// GET /api/votos/seguimiento - Seguimiento completo de votaciones
+router.get('/seguimiento', verificarToken, verificarRolPorId(1, 2), async (req, res) => {
+    try {
+        // Query que obtiene todas las mesas con su informacion completa
+        const seguimientoQuery = await pool.query(`
+            WITH RECURSIVE jerarquia AS (
+                -- Caso base: obtener el nodo inicial (raiz sin padre)
+                SELECT
+                    id_geografico,
+                    nombre,
+                    tipo,
+                    fk_id_geografico,
+                    ARRAY[nombre::text] as ruta_nombres,
+                    ARRAY[tipo::text] as ruta_tipos
+                FROM geografico
+                WHERE fk_id_geografico IS NULL
+
+                UNION ALL
+
+                -- Caso recursivo: obtener los hijos
+                SELECT
+                    g.id_geografico,
+                    g.nombre,
+                    g.tipo,
+                    g.fk_id_geografico,
+                    j.ruta_nombres || g.nombre::text,
+                    j.ruta_tipos || g.tipo::text
+                FROM geografico g
+                INNER JOIN jerarquia j ON g.fk_id_geografico = j.id_geografico
+            )
+            SELECT
+                m.id_mesa,
+                m.codigo as codigo_mesa,
+                m.numero_mesa,
+                r.id_recinto,
+                r.nombre as nombre_recinto,
+                r.direccion as direccion_recinto,
+                j.ruta_nombres as jerarquia_nombres,
+                j.ruta_tipos as jerarquia_tipos,
+                -- Informacion del delegado
+                dm.id_delegado_mesa,
+                ud.id_usuario as id_delegado,
+                ud.nombre_usuario as nombre_delegado,
+                -- Informacion del jefe de recinto
+                jr.id_jefe_recinto,
+                uj.id_usuario as id_jefe,
+                uj.nombre_usuario as nombre_jefe,
+                -- Informacion de actas
+                COUNT(a.id_acta)::integer as cantidad_actas,
+                MAX(a.id_acta) as id_acta_ultima,
+                MAX(a.estado_aprobacion) as estado_aprobacion,
+                MAX(a.motivo_rechazo) as motivo_rechazo,
+                MAX(a.fecha_registro) as fecha_registro,
+                MAX(a.votos_totales)::integer as votos_totales,
+                -- Estado general de la mesa
+                CASE
+                    WHEN COUNT(a.id_acta) = 0 THEN 'sin_acta'
+                    WHEN MAX(a.estado_aprobacion) = 'aprobado' THEN 'aprobado'
+                    WHEN MAX(a.estado_aprobacion) = 'rechazado' THEN 'rechazado'
+                    ELSE 'pendiente'
+                END as estado_mesa
+            FROM mesa m
+            LEFT JOIN recinto r ON m.id_recinto = r.id_recinto
+            LEFT JOIN jerarquia j ON r.id_geografico = j.id_geografico
+            LEFT JOIN acta a ON m.id_mesa = a.id_mesa
+            LEFT JOIN delegado_mesa dm ON m.id_mesa = dm.id_mesa AND dm.activo = TRUE
+            LEFT JOIN usuario ud ON dm.id_usuario = ud.id_usuario
+            LEFT JOIN jefe_recinto jr ON r.id_recinto = jr.id_recinto AND jr.activo = TRUE
+            LEFT JOIN usuario uj ON jr.id_usuario = uj.id_usuario
+            GROUP BY
+                m.id_mesa, m.codigo, m.numero_mesa,
+                r.id_recinto, r.nombre, r.direccion,
+                j.ruta_nombres, j.ruta_tipos,
+                dm.id_delegado_mesa, ud.id_usuario, ud.nombre_usuario,
+                jr.id_jefe_recinto, uj.id_usuario, uj.nombre_usuario
+            ORDER BY r.nombre, m.numero_mesa
+        `);
+
+        // Calcular estadisticas generales
+        const estadisticas = {
+            total_mesas: seguimientoQuery.rows.length,
+            mesas_con_acta: seguimientoQuery.rows.filter(m => parseInt(m.cantidad_actas) > 0).length,
+            mesas_sin_acta: seguimientoQuery.rows.filter(m => parseInt(m.cantidad_actas) === 0).length,
+            actas_pendientes: seguimientoQuery.rows.filter(m => m.estado_aprobacion === 'pendiente' || (parseInt(m.cantidad_actas) > 0 && !m.estado_aprobacion)).length,
+            actas_aprobadas: seguimientoQuery.rows.filter(m => m.estado_aprobacion === 'aprobado').length,
+            actas_rechazadas: seguimientoQuery.rows.filter(m => m.estado_aprobacion === 'rechazado').length
+        };
+
+        res.json({
+            success: true,
+            data: {
+                mesas: seguimientoQuery.rows,
+                estadisticas
+            }
+        });
+
+    } catch (error) {
+        console.error('Error al obtener seguimiento:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener seguimiento: ' + error.message
         });
     }
 });
