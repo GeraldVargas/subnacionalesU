@@ -1011,10 +1011,14 @@ router.get('/acta/:id', verificarToken, async (req, res) => {
 // GET /api/votos/resultados-vivo - Obtener resultados en tiempo real
 router.get('/resultados-vivo', async (req, res) => {
 
+    const client = await pool.connect();
     try {
+        // Set statement timeout
+        await client.query('SET statement_timeout = 30000');
+
         // Obtener votos agregados por frente político
-        const resultadosQuery = await pool.query(`
-            SELECT 
+        const resultadosQuery = await client.query(`
+            SELECT
                 f.id_frente,
                 f.nombre,
                 f.siglas,
@@ -1030,8 +1034,8 @@ router.get('/resultados-vivo', async (req, res) => {
         `);
 
         // Obtener resumen de actas
-        const resumenQuery = await pool.query(`
-            SELECT 
+        const resumenQuery = await client.query(`
+            SELECT
                 COUNT(*) as total_actas,
                 COALESCE(SUM(votos_totales), 0) as total_votos,
                 COALESCE(SUM(votos_nulos), 0) as votos_nulos,
@@ -1069,6 +1073,8 @@ router.get('/resultados-vivo', async (req, res) => {
             message: 'Error al obtener resultados',
             error: error.message
         });
+    } finally {
+        client.release();
     }
 });
 
