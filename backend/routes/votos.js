@@ -1223,6 +1223,19 @@ router.get('/seguimiento', verificarToken, verificarRolPorId(1, 2), async (req, 
                     j.ruta_tipos || g.tipo::text
                 FROM geografico g
                 INNER JOIN jerarquia j ON g.fk_id_geografico = j.id_geografico
+            ),
+            acta_ultima AS (
+                -- Obtener solo la acta más reciente por mesa
+                SELECT DISTINCT ON (id_mesa)
+                    id_acta, id_mesa, estado_aprobacion, motivo_rechazo, fecha_registro, votos_totales
+                FROM acta
+                ORDER BY id_mesa, id_acta DESC
+            ),
+            actas_count AS (
+                -- Contar total de actas por mesa
+                SELECT id_mesa, COUNT(*) as cantidad_actas
+                FROM acta
+                GROUP BY id_mesa
             )
             SELECT
                 m.id_mesa,
@@ -1242,33 +1255,28 @@ router.get('/seguimiento', verificarToken, verificarRolPorId(1, 2), async (req, 
                 uj.id_usuario as id_jefe,
                 uj.nombre_usuario as nombre_jefe,
                 -- Informacion de actas
-                COUNT(a.id_acta)::integer as cantidad_actas,
-                MAX(a.id_acta) as id_acta_ultima,
-                MAX(a.estado_aprobacion) as estado_aprobacion,
-                MAX(a.motivo_rechazo) as motivo_rechazo,
-                MAX(a.fecha_registro) as fecha_registro,
-                MAX(a.votos_totales)::integer as votos_totales,
+                COALESCE(ac.cantidad_actas, 0)::integer as cantidad_actas,
+                au.id_acta as id_acta_ultima,
+                au.estado_aprobacion,
+                au.motivo_rechazo,
+                au.fecha_registro,
+                au.votos_totales::integer as votos_totales,
                 -- Estado general de la mesa
                 CASE
-                    WHEN COUNT(a.id_acta) = 0 THEN 'sin_acta'
-                    WHEN MAX(a.estado_aprobacion) = 'aprobado' THEN 'aprobado'
-                    WHEN MAX(a.estado_aprobacion) = 'rechazado' THEN 'rechazado'
+                    WHEN au.id_acta IS NULL THEN 'sin_acta'
+                    WHEN au.estado_aprobacion = 'aprobado' THEN 'aprobado'
+                    WHEN au.estado_aprobacion = 'rechazado' THEN 'rechazado'
                     ELSE 'pendiente'
                 END as estado_mesa
             FROM mesa m
             INNER JOIN recinto r ON m.id_recinto = r.id_recinto
             INNER JOIN jerarquia j ON r.id_geografico = j.id_geografico
-            LEFT JOIN acta a ON m.id_mesa = a.id_mesa
+            LEFT JOIN acta_ultima au ON m.id_mesa = au.id_mesa
+            LEFT JOIN actas_count ac ON m.id_mesa = ac.id_mesa
             LEFT JOIN delegado_mesa dm ON m.id_mesa = dm.id_mesa AND dm.activo = TRUE
             LEFT JOIN usuario ud ON dm.id_usuario = ud.id_usuario
             LEFT JOIN jefe_recinto jr ON r.id_recinto = jr.id_recinto AND jr.activo = TRUE
             LEFT JOIN usuario uj ON jr.id_usuario = uj.id_usuario
-            GROUP BY
-                m.id_mesa, m.codigo, m.numero_mesa,
-                r.id_recinto, r.nombre, r.direccion,
-                j.ruta_nombres, j.ruta_tipos,
-                dm.id_delegado_mesa, ud.id_usuario, ud.nombre_usuario,
-                jr.id_jefe_recinto, uj.id_usuario, uj.nombre_usuario
             ORDER BY r.nombre, m.numero_mesa
         `);
 
