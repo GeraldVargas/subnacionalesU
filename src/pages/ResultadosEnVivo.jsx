@@ -135,7 +135,7 @@ const ResultadosEnVivo = () => {
                                     Resultados en Vivo
                                 </h1>
                                 <p className="text-xs sm:text-sm md:text-lg text-white/90">
-                                    Elecciones Subnacionales 2026 - Colcapirhua
+                                    Elecciones Subnacionales 2026 
                                 </p>
                             </div>
                         </div>
