@@ -243,12 +243,10 @@ const SeguimientoVotaciones = () => {
         if (filtro === 'con_acta' && (mesa.cantidad_actas === 0 || !mesa.cantidad_actas)) return false;
         if (filtro === 'sin_acta' && (mesa.cantidad_actas > 0 || mesa.cantidad_actas)) return false;
 
-        // Para pendientes: SOLO mostrar si NO es aprobado ni rechazado
+        // Para pendientes: SOLO mostrar si el estado es explícitamente 'pendiente'
         if (filtro === 'pendientes') {
             const estado = (mesa.estado_mesa || '').toLowerCase();
-            if (estado === 'aprobado' || estado === 'aprobada' ||
-                estado === 'rechazado' || estado === 'rechazada' ||
-                estado === 'approved' || estado === 'rejected') {
+            if (estado !== 'pendiente') {
                 return false;
             }
         }
