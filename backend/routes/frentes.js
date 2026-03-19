@@ -63,15 +63,15 @@ const verificarToken = (req, res, next) => {
 router.get('/', verificarToken, async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT 
+            SELECT
                 id_frente,
                 nombre,
                 siglas,
                 color,
                 logo,
-                CASE 
-                    WHEN logo IS NOT NULL THEN 'http://localhost:3000/uploads/logos/' || logo
-                    ELSE NULL 
+                CASE
+                    WHEN logo IS NOT NULL THEN '/uploads/logos/' || logo
+                    ELSE NULL
                 END as logo_url,
                 fecha_creacion
             FROM frente_politico
