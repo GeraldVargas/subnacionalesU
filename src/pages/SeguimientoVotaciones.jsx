@@ -255,10 +255,25 @@ const SeguimientoVotaciones = () => {
             return mesa.geografico_padre;
         }
 
-        // Usar el geografico padre como fallback
-        if (mesa.geografico_padre) return mesa.geografico_padre;
+        // Si no se encontró distrito, buscar en jerarquia_tipos para ubicar el distrito
+        if (mesa.jerarquia_tipos && mesa.jerarquia_nombres) {
+            const indexDistrito = mesa.jerarquia_tipos.findIndex(tipo =>
+                tipo.toLowerCase().includes('distrito')
+            );
+            if (indexDistrito !== -1 && mesa.jerarquia_nombres[indexDistrito]) {
+                return mesa.jerarquia_nombres[indexDistrito];
+            }
+        }
 
-        return null;
+        // Como última opción, buscar en la jerarquia cualquier nombre con número que podría ser un distrito
+        if (mesa.jerarquia_nombres) {
+            const posibleDistrito = mesa.jerarquia_nombres.find(j =>
+                /distrito\s+\d+/i.test(j) || /^d\d+$/i.test(j) || /^distrito$/i.test(j)
+            );
+            if (posibleDistrito) return posibleDistrito;
+        }
+
+        return 'Sin distrito';
     };
 
     // Filtrar mesas
@@ -723,8 +738,7 @@ const SeguimientoVotaciones = () => {
                                                     {/* Distrito/Ubicacion Geografica */}
                                                     {getDistritoMesa(mesa) && (
                                                         <p className="text-sm text-[#1E3A8A] font-semibold mt-1">
-                                                            {mesa.geografico_tipo ? `${mesa.geografico_tipo.charAt(0).toUpperCase() + mesa.geografico_tipo.slice(1)}: ` : 'Ubicacion: '}
-                                                            {getDistritoMesa(mesa)}
+                                                            Distrito: {getDistritoMesa(mesa)}
                                                         </p>
                                                     )}
 
