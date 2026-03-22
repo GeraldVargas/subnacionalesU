@@ -262,29 +262,23 @@ const SeguimientoVotaciones = () => {
 
     // Filtrar mesas
     const mesasFiltradas = mesas.filter(mesa => {
-        // Filtro por estado - Ser muy explícito
-        if (filtro === 'con_acta' && (mesa.cantidad_actas === 0 || !mesa.cantidad_actas)) return false;
-        if (filtro === 'sin_acta' && (mesa.cantidad_actas > 0 || mesa.cantidad_actas)) return false;
+        const estado = (mesa.estado_mesa || '').toLowerCase().trim();
 
-        // Para pendientes: SOLO mostrar si el estado es explícitamente 'pendiente'
-        if (filtro === 'pendientes') {
-            const estado = (mesa.estado_mesa || '').toLowerCase();
-            if (estado !== 'pendiente') {
-                return false;
-            }
+        // Aplicar filtro de estado primero
+        if (filtro === 'con_acta') {
+            if (mesa.cantidad_actas === 0) return false;
+        } else if (filtro === 'sin_acta') {
+            if (mesa.cantidad_actas > 0) return false;
+        } else if (filtro === 'pendientes') {
+            if (estado !== 'pendiente') return false;
+        } else if (filtro === 'aprobadas') {
+            if (estado !== 'aprobado') return false;
+        } else if (filtro === 'rechazadas') {
+            if (estado !== 'rechazado') return false;
         }
+        // Si filtro === 'todos', pasar todos los filtros de estado
 
-        if (filtro === 'aprobadas') {
-            const estado = (mesa.estado_mesa || '').toLowerCase();
-            if (estado !== 'aprobado' && estado !== 'aprobada' && estado !== 'approved') return false;
-        }
-
-        if (filtro === 'rechazadas') {
-            const estado = (mesa.estado_mesa || '').toLowerCase();
-            if (estado !== 'rechazado' && estado !== 'rechazada' && estado !== 'rejected') return false;
-        }
-
-        // Filtro por busqueda
+        // Aplicar búsqueda si existe
         if (busqueda) {
             const term = busqueda.toLowerCase().trim();
             const matchMesa = mesa.numero_mesa?.toString().includes(term);
