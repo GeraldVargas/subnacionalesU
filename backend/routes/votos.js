@@ -1306,9 +1306,9 @@ router.get('/seguimiento', verificarToken, verificarRolPorId(1, 2), async (req, 
             total_mesas: seguimientoQuery.rows.length,
             mesas_con_acta: seguimientoQuery.rows.filter(m => parseInt(m.cantidad_actas) > 0).length,
             mesas_sin_acta: seguimientoQuery.rows.filter(m => parseInt(m.cantidad_actas) === 0).length,
-            actas_pendientes: seguimientoQuery.rows.filter(m => m.estado_aprobacion === 'pendiente' || (parseInt(m.cantidad_actas) > 0 && !m.estado_aprobacion)).length,
-            actas_aprobadas: seguimientoQuery.rows.filter(m => m.estado_aprobacion === 'aprobado').length,
-            actas_rechazadas: seguimientoQuery.rows.filter(m => m.estado_aprobacion === 'rechazado').length
+            actas_pendientes: seguimientoQuery.rows.filter(m => m.estado_mesa === 'pendiente').length,
+            actas_aprobadas: seguimientoQuery.rows.filter(m => m.estado_mesa === 'aprobado').length,
+            actas_rechazadas: seguimientoQuery.rows.filter(m => m.estado_mesa === 'rechazado').length
         };
 
         res.json({
