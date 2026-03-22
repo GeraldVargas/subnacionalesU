@@ -237,6 +237,19 @@ const SeguimientoVotaciones = () => {
         return mesa.jerarquia_nombres.join(' > ');
     };
 
+    // Funcion auxiliar para obtener el distrito de una mesa
+    const getDistritoMesa = (mesa) => {
+        if (mesa.distrito_nombre) return mesa.distrito_nombre;
+        // Buscar en jerarquia un elemento que sea numero (posible distrito) o contenga "distrito"
+        if (mesa.jerarquia_nombres) {
+            const distritoEncontrado = mesa.jerarquia_nombres.find(j =>
+                j.toLowerCase().includes('distrito') || /^\d+$/.test(j)
+            );
+            if (distritoEncontrado) return distritoEncontrado;
+        }
+        return null;
+    };
+
     // Filtrar mesas
     const mesasFiltradas = mesas.filter(mesa => {
         // Filtro por estado - Ser muy explícito
@@ -263,14 +276,32 @@ const SeguimientoVotaciones = () => {
 
         // Filtro por busqueda
         if (busqueda) {
-            const term = busqueda.toLowerCase();
+            const term = busqueda.toLowerCase().trim();
             const matchMesa = mesa.numero_mesa?.toString().includes(term);
             const matchRecinto = mesa.nombre_recinto?.toLowerCase().includes(term);
             const matchDelegado = mesa.nombre_delegado?.toLowerCase().includes(term);
             const matchJefe = mesa.nombre_jefe?.toLowerCase().includes(term);
             const matchJerarquia = mesa.jerarquia_nombres?.some(j => j.toLowerCase().includes(term));
-            const matchDistrito = mesa.distrito_nombre?.toLowerCase().includes(term);
             const matchCodigo = mesa.codigo_mesa?.toLowerCase().includes(term);
+
+            // Busqueda especial por distrito
+            const distritoMesa = getDistritoMesa(mesa);
+            let matchDistrito = false;
+            if (distritoMesa) {
+                // Si buscan "distrito 1" o "distrito 21", etc.
+                const distritoLower = distritoMesa.toLowerCase();
+                matchDistrito = distritoLower.includes(term) ||
+                    term.includes(distritoLower) ||
+                    // Si buscan "distrito 1" y el distrito es "1"
+                    (term.includes('distrito') && term.includes(distritoMesa.toLowerCase()));
+
+                // Tambien si buscan solo el numero del distrito
+                const numeroDistrito = distritoMesa.replace(/\D/g, '');
+                const numeroBusqueda = term.replace(/\D/g, '');
+                if (numeroDistrito && numeroBusqueda && numeroDistrito === numeroBusqueda) {
+                    matchDistrito = true;
+                }
+            }
 
             return matchMesa || matchRecinto || matchDelegado || matchJefe || matchJerarquia || matchDistrito || matchCodigo;
         }
@@ -646,7 +677,7 @@ const SeguimientoVotaciones = () => {
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         <h3 className="font-bold text-gray-900">
-                                                            Mesa {mesa.numero_mesa} - {mesa.nombre_recinto || 'Sin Recinto'}
+                                                            {mesa.codigo_mesa && <span className="text-[#1E3A8A]">[{mesa.codigo_mesa}]</span>} Mesa {mesa.numero_mesa} - {mesa.nombre_recinto || 'Sin Recinto'}
                                                         </h3>
                                                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium border flex items-center gap-1 ${badge.color}`}>
                                                             <IconoBadge className="w-3 h-3" />
@@ -654,18 +685,18 @@ const SeguimientoVotaciones = () => {
                                                         </span>
                                                     </div>
 
+                                                    {/* Distrito */}
+                                                    {getDistritoMesa(mesa) && (
+                                                        <p className="text-sm text-[#1E3A8A] font-semibold mt-1">
+                                                            Distrito: {getDistritoMesa(mesa)}
+                                                        </p>
+                                                    )}
+
                                                     {/* Jerarquia */}
                                                     <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
                                                         <MapPin className="w-4 h-4" />
                                                         {getJerarquiaString(mesa)}
                                                     </p>
-
-                                                    {/* Distrito */}
-                                                    {mesa.distrito_nombre && (
-                                                        <p className="text-sm text-[#1E3A8A] font-medium mt-1">
-                                                            Distrito: {mesa.distrito_nombre}
-                                                        </p>
-                                                    )}
 
                                                     {/* Delegado y Jefe */}
                                                     <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-600">

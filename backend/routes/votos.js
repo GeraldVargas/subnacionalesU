@@ -1252,9 +1252,9 @@ router.get('/seguimiento', verificarToken, verificarRolPorId(1, 2), async (req, 
                 r.direccion as direccion_recinto,
                 j.ruta_nombres as jerarquia_nombres,
                 j.ruta_tipos as jerarquia_tipos,
-                -- Extraer el distrito de la jerarquia (el tipo 'distrito' en ruta_tipos)
+                -- Extraer el distrito de la jerarquia (buscar tipo que contenga 'distrito' case insensitive)
                 (SELECT j.ruta_nombres[idx] FROM generate_subscripts(j.ruta_tipos, 1) AS idx
-                 WHERE j.ruta_tipos[idx] = 'distrito' LIMIT 1) as distrito_nombre,
+                 WHERE LOWER(j.ruta_tipos[idx]) LIKE '%distrito%' LIMIT 1) as distrito_nombre,
                 -- Informacion del delegado
                 dm.id_delegado_mesa,
                 ud.id_usuario as id_delegado,
