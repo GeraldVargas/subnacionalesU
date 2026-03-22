@@ -1252,10 +1252,20 @@ router.get('/seguimiento', verificarToken, verificarRolPorId(1, 2), async (req, 
                 r.direccion as direccion_recinto,
                 j.ruta_nombres as jerarquia_nombres,
                 j.ruta_tipos as jerarquia_tipos,
-                -- Extraer el distrito: buscar en nombres que empiecen con 'Distrito' (case insensitive)
-                (SELECT j.ruta_nombres[idx] FROM generate_subscripts(j.ruta_nombres, 1) AS idx
-                 WHERE LOWER(j.ruta_nombres[idx]) ~ '^distrito'
-                 LIMIT 1) as distrito_nombre,
+                -- Obtener el nombre del geografico padre directo del recinto
+                g.nombre as geografico_padre,
+                g.tipo as geografico_tipo,
+                -- Extraer el distrito: buscar en nombres o tipos que contengan 'distrito'
+                COALESCE(
+                    (SELECT j.ruta_nombres[idx] FROM generate_subscripts(j.ruta_nombres, 1) AS idx
+                     WHERE LOWER(j.ruta_nombres[idx]) LIKE 'distrito%' OR LOWER(j.ruta_nombres[idx]) LIKE '%distrito %'
+                     LIMIT 1),
+                    (SELECT j.ruta_nombres[idx] FROM generate_subscripts(j.ruta_tipos, 1) AS idx
+                     WHERE LOWER(j.ruta_tipos[idx]) LIKE '%distrito%'
+                     LIMIT 1),
+                    -- Si no hay distrito explicito, usar el geografico padre si su tipo es distrito
+                    CASE WHEN LOWER(g.tipo) LIKE '%distrito%' THEN g.nombre ELSE NULL END
+                ) as distrito_nombre,
                 -- Informacion del delegado
                 dm.id_delegado_mesa,
                 ud.id_usuario as id_delegado,
@@ -1280,6 +1290,7 @@ router.get('/seguimiento', verificarToken, verificarRolPorId(1, 2), async (req, 
                 END as estado_mesa
             FROM mesa m
             INNER JOIN recinto r ON m.id_recinto = r.id_recinto
+            LEFT JOIN geografico g ON r.id_geografico = g.id_geografico
             INNER JOIN jerarquia j ON r.id_geografico = j.id_geografico
             LEFT JOIN acta_ultima au ON m.id_mesa = au.id_mesa
             LEFT JOIN actas_count ac ON m.id_mesa = ac.id_mesa

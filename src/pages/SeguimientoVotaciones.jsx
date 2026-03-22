@@ -242,13 +242,22 @@ const SeguimientoVotaciones = () => {
         // Primero verificar si el backend ya extrajo el distrito
         if (mesa.distrito_nombre) return mesa.distrito_nombre;
 
-        // Buscar en jerarquia un elemento que empiece con "distrito" (case insensitive)
+        // Buscar en jerarquia un elemento que empiece o contenga "distrito" (case insensitive)
         if (mesa.jerarquia_nombres) {
             const distritoEncontrado = mesa.jerarquia_nombres.find(j =>
-                j.toLowerCase().startsWith('distrito')
+                j.toLowerCase().startsWith('distrito') || j.toLowerCase().includes('distrito ')
             );
             if (distritoEncontrado) return distritoEncontrado;
         }
+
+        // Si el geografico padre tiene tipo distrito, usar su nombre
+        if (mesa.geografico_tipo && mesa.geografico_tipo.toLowerCase().includes('distrito')) {
+            return mesa.geografico_padre;
+        }
+
+        // Usar el geografico padre como fallback
+        if (mesa.geografico_padre) return mesa.geografico_padre;
+
         return null;
     };
 
@@ -285,40 +294,51 @@ const SeguimientoVotaciones = () => {
             const matchJefe = mesa.nombre_jefe?.toLowerCase().includes(term);
             const matchCodigo = mesa.codigo_mesa?.toLowerCase().includes(term);
 
-            // Busqueda por distrito - case insensitive
+            // Busqueda por distrito/geografico - case insensitive
             const distritoMesa = getDistritoMesa(mesa);
             let matchDistrito = false;
             if (distritoMesa) {
                 const distritoLower = distritoMesa.toLowerCase();
-                // Comparacion case insensitive
-                // Ej: busqueda="distrito 1" distrito="Distrito 1" -> match
-                // Ej: busqueda="DISTRITO 1" distrito="Distrito 1" -> match
-                // Ej: busqueda="1" distrito="Distrito 1" -> match (por numero)
+
+                // Comparacion directa case insensitive
                 matchDistrito = distritoLower.includes(term) || term.includes(distritoLower);
 
-                // Si buscan solo un numero, verificar si el distrito tiene ese numero
+                // Si buscan un numero (ej: "4"), buscar coincidencia exacta con el numero en el distrito
                 if (!matchDistrito && /^\d+$/.test(term)) {
-                    const numeroEnDistrito = distritoMesa.match(/\d+/);
-                    if (numeroEnDistrito && numeroEnDistrito[0] === term) {
+                    // Extraer todos los numeros del distrito
+                    const numerosEnDistrito = distritoMesa.match(/\d+/g);
+                    if (numerosEnDistrito && numerosEnDistrito.includes(term)) {
                         matchDistrito = true;
                     }
                 }
 
-                // Busqueda especial: "distrito X" donde X es numero
-                // Normalizar la busqueda removiendo espacios extras
+                // Si buscan "distrito X" o "DISTRITO X"
                 if (!matchDistrito && term.includes('distrito')) {
                     const numBusqueda = term.replace(/distrito/gi, '').trim();
-                    const numDistrito = distritoMesa.toLowerCase().replace(/distrito/gi, '').trim();
+                    const numDistrito = distritoLower.replace(/distrito/gi, '').trim();
                     if (numBusqueda && numDistrito && numBusqueda === numDistrito) {
                         matchDistrito = true;
                     }
                 }
             }
 
-            // Busqueda en jerarquia completa
-            const matchJerarquia = mesa.jerarquia_nombres?.some(j => j.toLowerCase().includes(term));
+            // Busqueda en jerarquia completa (permite buscar por cualquier nivel)
+            const matchJerarquia = mesa.jerarquia_nombres?.some(j => {
+                const jLower = j.toLowerCase();
+                // Match directo
+                if (jLower.includes(term)) return true;
+                // Match por numero exacto (ej: buscar "4" encuentra "Distrito 4")
+                if (/^\d+$/.test(term)) {
+                    const numeros = j.match(/\d+/g);
+                    if (numeros && numeros.includes(term)) return true;
+                }
+                return false;
+            });
 
-            return matchMesa || matchRecinto || matchDelegado || matchJefe || matchJerarquia || matchDistrito || matchCodigo;
+            // Busqueda en geografico padre
+            const matchGeografico = mesa.geografico_padre?.toLowerCase().includes(term);
+
+            return matchMesa || matchRecinto || matchDelegado || matchJefe || matchJerarquia || matchDistrito || matchCodigo || matchGeografico;
         }
 
         return true;
@@ -700,10 +720,11 @@ const SeguimientoVotaciones = () => {
                                                         </span>
                                                     </div>
 
-                                                    {/* Distrito */}
+                                                    {/* Distrito/Ubicacion Geografica */}
                                                     {getDistritoMesa(mesa) && (
                                                         <p className="text-sm text-[#1E3A8A] font-semibold mt-1">
-                                                            Distrito: {getDistritoMesa(mesa)}
+                                                            {mesa.geografico_tipo ? `${mesa.geografico_tipo.charAt(0).toUpperCase() + mesa.geografico_tipo.slice(1)}: ` : 'Ubicacion: '}
+                                                            {getDistritoMesa(mesa)}
                                                         </p>
                                                     )}
 
