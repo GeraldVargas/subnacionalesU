@@ -242,10 +242,10 @@ const SeguimientoVotaciones = () => {
         // Primero verificar si el backend ya extrajo el distrito
         if (mesa.distrito_nombre) return mesa.distrito_nombre;
 
-        // Buscar en jerarquia un elemento que contenga "distrito" en el nombre
+        // Buscar en jerarquia un elemento que empiece con "distrito" (case insensitive)
         if (mesa.jerarquia_nombres) {
             const distritoEncontrado = mesa.jerarquia_nombres.find(j =>
-                j.toLowerCase().includes('distrito')
+                j.toLowerCase().startsWith('distrito')
             );
             if (distritoEncontrado) return distritoEncontrado;
         }
@@ -285,19 +285,31 @@ const SeguimientoVotaciones = () => {
             const matchJefe = mesa.nombre_jefe?.toLowerCase().includes(term);
             const matchCodigo = mesa.codigo_mesa?.toLowerCase().includes(term);
 
-            // Busqueda por distrito - buscar en jerarquia elementos que contengan "distrito"
+            // Busqueda por distrito - case insensitive
             const distritoMesa = getDistritoMesa(mesa);
             let matchDistrito = false;
             if (distritoMesa) {
                 const distritoLower = distritoMesa.toLowerCase();
-                // Si buscan "distrito 1", "distrito 2", etc.
+                // Comparacion case insensitive
+                // Ej: busqueda="distrito 1" distrito="Distrito 1" -> match
+                // Ej: busqueda="DISTRITO 1" distrito="Distrito 1" -> match
+                // Ej: busqueda="1" distrito="Distrito 1" -> match (por numero)
                 matchDistrito = distritoLower.includes(term) || term.includes(distritoLower);
 
-                // Si buscan solo "1" o "2", verificar si el distrito contiene ese numero
+                // Si buscan solo un numero, verificar si el distrito tiene ese numero
                 if (!matchDistrito && /^\d+$/.test(term)) {
-                    // Extraer el numero del distrito (ej: "Distrito 1" -> "1")
                     const numeroEnDistrito = distritoMesa.match(/\d+/);
                     if (numeroEnDistrito && numeroEnDistrito[0] === term) {
+                        matchDistrito = true;
+                    }
+                }
+
+                // Busqueda especial: "distrito X" donde X es numero
+                // Normalizar la busqueda removiendo espacios extras
+                if (!matchDistrito && term.includes('distrito')) {
+                    const numBusqueda = term.replace(/distrito/gi, '').trim();
+                    const numDistrito = distritoMesa.toLowerCase().replace(/distrito/gi, '').trim();
+                    if (numBusqueda && numDistrito && numBusqueda === numDistrito) {
                         matchDistrito = true;
                     }
                 }
