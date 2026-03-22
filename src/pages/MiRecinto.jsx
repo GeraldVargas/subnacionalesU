@@ -22,8 +22,10 @@ const MiRecinto = () => {
     const [savingVotos, setSavingVotos] = useState(false);
     const [votosAlcalde, setVotosAlcalde] = useState([]);
     const [votosConcejal, setVotosConcejal] = useState([]);
-    const [votosNulos, setVotosNulos] = useState('');
-    const [votosBlancos, setVotosBlancos] = useState('');
+    const [votosNulosAlcalde, setVotosNulosAlcalde] = useState('');
+    const [votosBlancosAlcalde, setVotosBlancosAlcalde] = useState('');
+    const [votosNulosConcejal, setVotosNulosConcejal] = useState('');
+    const [votosBlancosConcejal, setVotosBlancosConcejal] = useState('');
     const [observaciones, setObservaciones] = useState('');
     const [imagenActa, setImagenActa] = useState(null);
 
@@ -184,7 +186,9 @@ const MiRecinto = () => {
         const hayVotosAlcalde = votosAlcalde.some((v) => toInt(v.cantidad) > 0);
         const hayVotosConcejal = votosConcejal.some((v) => toInt(v.cantidad) > 0);
 
-        if (!hayVotosAlcalde && !hayVotosConcejal && toInt(votosNulos) === 0 && toInt(votosBlancos) === 0) {
+        if (!hayVotosAlcalde && !hayVotosConcejal &&
+            toInt(votosNulosAlcalde) === 0 && toInt(votosBlancosAlcalde) === 0 &&
+            toInt(votosNulosConcejal) === 0 && toInt(votosBlancosConcejal) === 0) {
             mostrarError('Error', 'Debe registrar al menos un voto');
             return;
         }
@@ -195,8 +199,8 @@ const MiRecinto = () => {
             const formData = new FormData();
             formData.append('id_mesa', selectedMesa.id_mesa);
             formData.append('id_tipo_eleccion', 1);
-            formData.append('votos_nulos', toInt(votosNulos));
-            formData.append('votos_blancos', toInt(votosBlancos));
+            formData.append('votos_nulos', toInt(votosNulosAlcalde) + toInt(votosNulosConcejal));
+            formData.append('votos_blancos', toInt(votosBlancosAlcalde) + toInt(votosBlancosConcejal));
             formData.append('observaciones', observaciones);
 
             const votosAlcaldeFiltrados = votosAlcalde
@@ -257,8 +261,10 @@ const MiRecinto = () => {
     };
 
     const resetFormulario = () => {
-        setVotosNulos('');
-        setVotosBlancos('');
+        setVotosNulosAlcalde('');
+        setVotosBlancosAlcalde('');
+        setVotosNulosConcejal('');
+        setVotosBlancosConcejal('');
         setObservaciones('');
         setImagenActa(null);
 
@@ -360,8 +366,11 @@ const MiRecinto = () => {
             setVotosConcejal(votosConcejalEdit);
         }
 
-        setVotosNulos(String(actaConVotos.votos_nulos || 0));
-        setVotosBlancos(String(actaConVotos.votos_blancos || 0));
+        // Para compatibilidad con actas antiguas, asignamos todos los nulos/blancos a alcalde
+        setVotosNulosAlcalde(String(actaConVotos.votos_nulos || 0));
+        setVotosBlancosAlcalde(String(actaConVotos.votos_blancos || 0));
+        setVotosNulosConcejal('0');
+        setVotosBlancosConcejal('0');
         setObservaciones(actaConVotos.observaciones || '');
         setModoEdicion(true);
         setActaDetalle(actaConVotos);
@@ -374,8 +383,8 @@ const MiRecinto = () => {
             setSavingVotos(true);
 
             const formData = new FormData();
-            formData.append('votos_nulos', toInt(votosNulos));
-            formData.append('votos_blancos', toInt(votosBlancos));
+            formData.append('votos_nulos', toInt(votosNulosAlcalde) + toInt(votosNulosConcejal));
+            formData.append('votos_blancos', toInt(votosBlancosAlcalde) + toInt(votosBlancosConcejal));
             formData.append('observaciones', observaciones);
 
             const votosAlcaldeFiltrados = votosAlcalde
@@ -461,7 +470,8 @@ const MiRecinto = () => {
 
     const totalVotosAlcalde = votosAlcalde.reduce((sum, v) => sum + toInt(v.cantidad), 0);
     const totalVotosConcejal = votosConcejal.reduce((sum, v) => sum + toInt(v.cantidad), 0);
-    const totalGeneral = totalVotosAlcalde + totalVotosConcejal + toInt(votosNulos) + toInt(votosBlancos);
+    const totalNulosBlancos = toInt(votosNulosAlcalde) + toInt(votosBlancosAlcalde) + toInt(votosNulosConcejal) + toInt(votosBlancosConcejal);
+    const totalGeneral = totalVotosAlcalde + totalVotosConcejal + totalNulosBlancos;
 
     // Vista: Lista de Recintos
     if (!recintoSeleccionado) {
@@ -753,29 +763,61 @@ const MiRecinto = () => {
                                         </div>
                                     </div>
 
-                                    {/* Nulos y Blancos */}
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Votos Nulos</label>
-                                            <input
-                                                type="number"
-                                                value={votosNulos}
-                                                onChange={(e) => setVotosNulos(e.target.value)}
-                                                min="0"
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent"
-                                                placeholder="0"
-                                            />
+                                    {/* Votos Nulos y Blancos - Alcalde */}
+                                    <div>
+                                        <h3 className="text-base font-bold text-gray-900 mb-3">Votos Nulos y Blancos - Alcalde</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Votos Nulos</label>
+                                                <input
+                                                    type="number"
+                                                    value={votosNulosAlcalde}
+                                                    onChange={(e) => setVotosNulosAlcalde(e.target.value)}
+                                                    min="0"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent"
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Votos Blancos</label>
+                                                <input
+                                                    type="number"
+                                                    value={votosBlancosAlcalde}
+                                                    onChange={(e) => setVotosBlancosAlcalde(e.target.value)}
+                                                    min="0"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent"
+                                                    placeholder="0"
+                                                />
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Votos Blancos</label>
-                                            <input
-                                                type="number"
-                                                value={votosBlancos}
-                                                onChange={(e) => setVotosBlancos(e.target.value)}
-                                                min="0"
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent"
-                                                placeholder="0"
-                                            />
+                                    </div>
+
+                                    {/* Votos Nulos y Blancos - Concejal */}
+                                    <div>
+                                        <h3 className="text-base font-bold text-gray-900 mb-3">Votos Nulos y Blancos - Concejal</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Votos Nulos</label>
+                                                <input
+                                                    type="number"
+                                                    value={votosNulosConcejal}
+                                                    onChange={(e) => setVotosNulosConcejal(e.target.value)}
+                                                    min="0"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent"
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Votos Blancos</label>
+                                                <input
+                                                    type="number"
+                                                    value={votosBlancosConcejal}
+                                                    onChange={(e) => setVotosBlancosConcejal(e.target.value)}
+                                                    min="0"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent"
+                                                    placeholder="0"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
 
@@ -813,7 +855,8 @@ const MiRecinto = () => {
                                         <div className="text-xs text-gray-600 space-y-1">
                                             <p><span className="font-semibold">Alcalde:</span> {totalVotosAlcalde} votos</p>
                                             <p><span className="font-semibold">Concejal:</span> {totalVotosConcejal} votos</p>
-                                            <p><span className="font-semibold">Nulos:</span> {toInt(votosNulos)} | <span className="font-semibold">Blancos:</span> {toInt(votosBlancos)}</p>
+                                            <p><span className="font-semibold">Nulos Alcalde:</span> {toInt(votosNulosAlcalde)} | <span className="font-semibold">Blancos Alcalde:</span> {toInt(votosBlancosAlcalde)}</p>
+                                            <p><span className="font-semibold">Nulos Concejal:</span> {toInt(votosNulosConcejal)} | <span className="font-semibold">Blancos Concejal:</span> {toInt(votosBlancosConcejal)}</p>
                                         </div>
                                         <p className="text-sm font-bold text-[#1E3A8A] mt-2">Total General: {totalGeneral} votos</p>
                                     </div>
@@ -1025,27 +1068,57 @@ const MiRecinto = () => {
                                         </div>
                                     </div>
 
-                                    {/* Nulos, Blancos, Observaciones */}
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Votos Nulos</label>
-                                            <input
-                                                type="number"
-                                                value={votosNulos}
-                                                onChange={(e) => setVotosNulos(e.target.value)}
-                                                min="0"
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            />
+                                    {/* Votos Nulos y Blancos - Alcalde */}
+                                    <div>
+                                        <h3 className="text-base font-bold text-gray-900 mb-3">Votos Nulos y Blancos - Alcalde</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Votos Nulos</label>
+                                                <input
+                                                    type="number"
+                                                    value={votosNulosAlcalde}
+                                                    onChange={(e) => setVotosNulosAlcalde(e.target.value)}
+                                                    min="0"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Votos Blancos</label>
+                                                <input
+                                                    type="number"
+                                                    value={votosBlancosAlcalde}
+                                                    onChange={(e) => setVotosBlancosAlcalde(e.target.value)}
+                                                    min="0"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                                />
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Votos Blancos</label>
-                                            <input
-                                                type="number"
-                                                value={votosBlancos}
-                                                onChange={(e) => setVotosBlancos(e.target.value)}
-                                                min="0"
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            />
+                                    </div>
+
+                                    {/* Votos Nulos y Blancos - Concejal */}
+                                    <div>
+                                        <h3 className="text-base font-bold text-gray-900 mb-3">Votos Nulos y Blancos - Concejal</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Votos Nulos</label>
+                                                <input
+                                                    type="number"
+                                                    value={votosNulosConcejal}
+                                                    onChange={(e) => setVotosNulosConcejal(e.target.value)}
+                                                    min="0"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Votos Blancos</label>
+                                                <input
+                                                    type="number"
+                                                    value={votosBlancosConcejal}
+                                                    onChange={(e) => setVotosBlancosConcejal(e.target.value)}
+                                                    min="0"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
 
