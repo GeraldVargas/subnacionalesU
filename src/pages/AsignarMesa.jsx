@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Trash2, Loader, AlertCircle, CheckCircle, Lock } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Loader, AlertCircle, CheckCircle, Lock, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const AsignarMesa = () => {
@@ -13,6 +13,8 @@ const AsignarMesa = () => {
     const [submitting, setSubmitting] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
     const [usuario, setUsuario] = useState(null);
+    const [busquedaDelegado, setBusquedaDelegado] = useState('');
+    const [busquedaMesa, setBusquedaMesa] = useState('');
 
     const API_URL = import.meta.env.VITE_API_URL;
     const token = localStorage.getItem('token');
@@ -92,6 +94,23 @@ const AsignarMesa = () => {
             setLoading(false);
         }
     };
+
+    // Filtrar delegados
+    const delegadosFiltrados = delegados.filter(d => {
+        if (!busquedaDelegado) return true;
+        const term = busquedaDelegado.toLowerCase();
+        return d.nombre_usuario?.toLowerCase().includes(term);
+    });
+
+    // Filtrar mesas
+    const mesasFiltradas = mesas.filter(m => {
+        if (!busquedaMesa) return true;
+        const term = busquedaMesa.toLowerCase();
+        const matchCodigo = m.codigo?.toLowerCase().includes(term);
+        const matchNumero = m.numero_mesa?.toString().includes(term);
+        const matchRecinto = m.recinto_nombre?.toLowerCase().includes(term);
+        return matchCodigo || matchNumero || matchRecinto;
+    });
 
     const handleAsignar = async (e) => {
         e.preventDefault();
@@ -204,18 +223,33 @@ const AsignarMesa = () => {
                             <label className="block text-sm font-bold text-gray-700 mb-2">
                                 Delegado de Mesa
                             </label>
+                            <div className="relative mb-2">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={busquedaDelegado}
+                                    onChange={(e) => setBusquedaDelegado(e.target.value)}
+                                    placeholder="Buscar delegado..."
+                                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#1E3A8A] text-sm"
+                                />
+                            </div>
                             <select
                                 value={selectedDelegado}
                                 onChange={(e) => setSelectedDelegado(e.target.value)}
                                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#1E3A8A] transition"
                             >
                                 <option value="">-- Selecciona un delegado --</option>
-                                {delegados.map((d) => (
+                                {delegadosFiltrados.map((d) => (
                                     <option key={d.id_usuario} value={d.id_usuario}>
                                         {d.nombre_usuario}
                                     </option>
                                 ))}
                             </select>
+                            {busquedaDelegado && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {delegadosFiltrados.length} de {delegados.length} delegados
+                                </p>
+                            )}
                         </div>
 
                         {/* Seleccionar Mesa */}
@@ -223,18 +257,33 @@ const AsignarMesa = () => {
                             <label className="block text-sm font-bold text-gray-700 mb-2">
                                 Mesa
                             </label>
+                            <div className="relative mb-2">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={busquedaMesa}
+                                    onChange={(e) => setBusquedaMesa(e.target.value)}
+                                    placeholder="Buscar por codigo, numero o recinto..."
+                                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#1E3A8A] text-sm"
+                                />
+                            </div>
                             <select
                                 value={selectedMesa}
                                 onChange={(e) => setSelectedMesa(e.target.value)}
                                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#1E3A8A] transition"
                             >
                                 <option value="">-- Selecciona una mesa --</option>
-                                {mesas.map((m) => (
+                                {mesasFiltradas.map((m) => (
                                     <option key={m.id_mesa} value={m.id_mesa}>
-                                        {m.codigo || m.numero_mesa} - {m.recinto_nombre || 'Sin recinto'}
+                                        {m.codigo || '-'} | Mesa {m.numero_mesa} | {m.recinto_nombre || 'Sin recinto'}
                                     </option>
                                 ))}
                             </select>
+                            {busquedaMesa && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {mesasFiltradas.length} de {mesas.length} mesas
+                                </p>
+                            )}
                         </div>
                     </div>
 

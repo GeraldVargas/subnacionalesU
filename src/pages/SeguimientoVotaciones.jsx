@@ -269,8 +269,10 @@ const SeguimientoVotaciones = () => {
             const matchDelegado = mesa.nombre_delegado?.toLowerCase().includes(term);
             const matchJefe = mesa.nombre_jefe?.toLowerCase().includes(term);
             const matchJerarquia = mesa.jerarquia_nombres?.some(j => j.toLowerCase().includes(term));
+            const matchDistrito = mesa.distrito_nombre?.toLowerCase().includes(term);
+            const matchCodigo = mesa.codigo_mesa?.toLowerCase().includes(term);
 
-            return matchMesa || matchRecinto || matchDelegado || matchJefe || matchJerarquia;
+            return matchMesa || matchRecinto || matchDelegado || matchJefe || matchJerarquia || matchDistrito || matchCodigo;
         }
 
         return true;
@@ -569,7 +571,7 @@ const SeguimientoVotaciones = () => {
                                 type="text"
                                 value={busqueda}
                                 onChange={(e) => setBusqueda(e.target.value)}
-                                placeholder="Buscar por mesa, recinto, delegado, jefe o ubicacion..."
+                                placeholder="Buscar por mesa, recinto, distrito, delegado o jefe..."
                                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent"
                             />
                         </div>
@@ -657,6 +659,13 @@ const SeguimientoVotaciones = () => {
                                                         <MapPin className="w-4 h-4" />
                                                         {getJerarquiaString(mesa)}
                                                     </p>
+
+                                                    {/* Distrito */}
+                                                    {mesa.distrito_nombre && (
+                                                        <p className="text-sm text-[#1E3A8A] font-medium mt-1">
+                                                            Distrito: {mesa.distrito_nombre}
+                                                        </p>
+                                                    )}
 
                                                     {/* Delegado y Jefe */}
                                                     <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-600">

@@ -30,6 +30,7 @@ router.get('/roles', verificarToken, async (req, res) => {
 router.get('/', verificarToken, verificarRolPorId(1, 2), async (req, res) => {
   try {
     const { id_rol } = req.query;
+    const esAdmin = req.usuario.id_rol === 1;
 
     let query = `
       SELECT
@@ -37,19 +38,20 @@ router.get('/', verificarToken, verificarRolPorId(1, 2), async (req, res) => {
         u.nombre_usuario,
         u.fecha_fin,
         u.id_rol,
+        ${esAdmin ? 'u.contrasena_visible,' : ''}
         r.nombre as rol_nombre,
         r.descripcion as rol_descripcion
       FROM usuario u
       LEFT JOIN rol r ON u.id_rol = r.id_rol
     `;
-    
+
     const params = [];
-    
+
     if (id_rol) {
       query += ` WHERE u.id_rol = $1`;
       params.push(parseInt(id_rol));
     }
-    
+
     query += ` ORDER BY u.id_usuario DESC`;
 
     const result = await pool.query(query, params);
@@ -59,6 +61,7 @@ router.get('/', verificarToken, verificarRolPorId(1, 2), async (req, res) => {
       nombre_usuario: u.nombre_usuario,
       id_rol: u.id_rol,
       activo: !u.fecha_fin || new Date(u.fecha_fin) > new Date(),
+      contrasena_visible: esAdmin ? (u.contrasena_visible || null) : undefined,
       rol: u.rol_nombre
         ? { nombre: u.rol_nombre, descripcion: u.rol_descripcion }
         : null
@@ -112,14 +115,14 @@ router.post('/', verificarToken, soloAdministrador, async (req, res) => {
     // Hashear contraseña
     const hashedPassword = await bcrypt.hash(contrasena, 10);
 
-    // Crear usuario
+    // Crear usuario (guardando también contraseña visible para admin)
     const usuarioResult = await pool.query(
       `
-      INSERT INTO usuario (nombre_usuario, contrasena, id_rol)
-      VALUES ($1, $2, $3)
+      INSERT INTO usuario (nombre_usuario, contrasena, id_rol, contrasena_visible)
+      VALUES ($1, $2, $3, $4)
       RETURNING id_usuario, nombre_usuario, id_rol, fecha_fin
       `,
-      [nombre_usuario, hashedPassword, id_rol]
+      [nombre_usuario, hashedPassword, id_rol, contrasena]
     );
 
     // Traer rol para devolverlo bonito
@@ -246,8 +249,8 @@ router.put('/:id', verificarToken, soloAdministrador, async (req, res) => {
 
     if (contrasena && contrasena.trim() !== '') {
       const hashedPassword = await bcrypt.hash(contrasena, 10);
-      updateQuery += `, contrasena = $3 WHERE id_usuario = $4 RETURNING id_usuario, nombre_usuario, id_rol, fecha_fin`;
-      params.push(hashedPassword, id);
+      updateQuery += `, contrasena = $3, contrasena_visible = $4 WHERE id_usuario = $5 RETURNING id_usuario, nombre_usuario, id_rol, fecha_fin`;
+      params.push(hashedPassword, contrasena, id);
     } else {
       updateQuery += ` WHERE id_usuario = $3 RETURNING id_usuario, nombre_usuario, id_rol, fecha_fin`;
       params.push(id);

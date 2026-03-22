@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Trash2, Loader, AlertCircle, CheckCircle, Lock } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Loader, AlertCircle, CheckCircle, Lock, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ModalConfirmacion from '../components/ModalConfirmacion';
 import useModal from '../hooks/useModal';
@@ -16,6 +16,8 @@ const AsignarRecinto = () => {
     const [jefasActual, setJefasActual] = useState(null);
     const [usuario, setUsuario] = useState(null);
     const [errorAcceso, setErrorAcceso] = useState(null);
+    const [busquedaJefe, setBusquedaJefe] = useState('');
+    const [busquedaRecinto, setBusquedaRecinto] = useState('');
 
     // Modal
     const { isOpen, modalConfig, cerrarModal, mostrarExito, mostrarError, mostrarAdvertencia, mostrarModal } = useModal();
@@ -110,6 +112,23 @@ const AsignarRecinto = () => {
             setLoading(false);
         }
     };
+
+    // Filtrar jefes
+    const jefesFiltrados = jefes.filter(j => {
+        if (!busquedaJefe) return true;
+        const term = busquedaJefe.toLowerCase();
+        return j.nombre_usuario?.toLowerCase().includes(term);
+    });
+
+    // Filtrar recintos
+    const recintosFiltrados = recintos.filter(r => {
+        if (!busquedaRecinto) return true;
+        const term = busquedaRecinto.toLowerCase();
+        const matchNombre = r.nombre?.toLowerCase().includes(term);
+        const matchDistrito = r.distrito_nombre?.toLowerCase().includes(term);
+        const matchMunicipio = r.nombre_geografico?.toLowerCase().includes(term);
+        return matchNombre || matchDistrito || matchMunicipio;
+    });
 
     const handleAsignar = async (e) => {
         e.preventDefault();
@@ -297,18 +316,33 @@ const AsignarRecinto = () => {
                             <label className="block text-sm font-bold text-gray-700 mb-2">
                                 Jefe de Recinto
                             </label>
+                            <div className="relative mb-2">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={busquedaJefe}
+                                    onChange={(e) => setBusquedaJefe(e.target.value)}
+                                    placeholder="Buscar jefe..."
+                                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#8B5CF6] text-sm"
+                                />
+                            </div>
                             <select
                                 value={selectedJefe}
                                 onChange={(e) => setSelectedJefe(e.target.value)}
                                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#1E3A8A] transition"
                             >
                                 <option value="">-- Selecciona un jefe --</option>
-                                {jefes.map((j) => (
+                                {jefesFiltrados.map((j) => (
                                     <option key={j.id_usuario} value={j.id_usuario}>
                                         {j.nombre_usuario}
                                     </option>
                                 ))}
                             </select>
+                            {busquedaJefe && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {jefesFiltrados.length} de {jefes.length} jefes
+                                </p>
+                            )}
                         </div>
 
                         {/* Seleccionar Recinto */}
@@ -316,18 +350,33 @@ const AsignarRecinto = () => {
                             <label className="block text-sm font-bold text-gray-700 mb-2">
                                 Recinto
                             </label>
+                            <div className="relative mb-2">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    value={busquedaRecinto}
+                                    onChange={(e) => setBusquedaRecinto(e.target.value)}
+                                    placeholder="Buscar por nombre, distrito o municipio..."
+                                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#8B5CF6] text-sm"
+                                />
+                            </div>
                             <select
                                 value={selectedRecinto}
                                 onChange={(e) => setSelectedRecinto(e.target.value)}
                                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#1E3A8A] transition"
                             >
                                 <option value="">-- Selecciona un recinto --</option>
-                                {recintos.map((r) => (
+                                {recintosFiltrados.map((r) => (
                                     <option key={r.id_recinto} value={r.id_recinto}>
-                                        {r.nombre} - {r.distrito_nombre || r.nombre_geografico || 'Sin distrito'}
+                                        {r.nombre} | {r.distrito_nombre || 'Sin distrito'} | {r.nombre_geografico || 'Sin municipio'}
                                     </option>
                                 ))}
                             </select>
+                            {busquedaRecinto && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {recintosFiltrados.length} de {recintos.length} recintos
+                                </p>
+                            )}
                         </div>
                     </div>
 

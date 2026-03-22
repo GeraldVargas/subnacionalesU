@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Edit, Trash2, Plus, UserCircle, X, Shield, Key, Mail, CheckCircle, XCircle } from 'lucide-react';
+import { Edit, Trash2, Plus, UserCircle, X, Shield, Key, Mail, CheckCircle, XCircle, Search, Eye, EyeOff } from 'lucide-react';
 
 const GestionUsuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -10,6 +10,8 @@ const GestionUsuarios = () => {
   const [guardando, setGuardando] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);
   const [idUsuarioEditar, setIdUsuarioEditar] = useState(null);
+  const [busqueda, setBusqueda] = useState('');
+  const [mostrarContrasenas, setMostrarContrasenas] = useState({});
 
   const [nuevoUsuario, setNuevoUsuario] = useState({
     nombre_usuario: '',
@@ -68,6 +70,21 @@ const GestionUsuarios = () => {
     cargarUsuarios();
     cargarRoles();
   }, []);
+
+  // Filtrar usuarios por búsqueda
+  const usuariosFiltrados = usuarios.filter(u => {
+    if (!busqueda) return true;
+    const term = busqueda.toLowerCase();
+    return u.nombre_usuario?.toLowerCase().includes(term);
+  });
+
+  // Toggle mostrar/ocultar contraseña
+  const toggleMostrarContrasena = (idUsuario) => {
+    setMostrarContrasenas(prev => ({
+      ...prev,
+      [idUsuario]: !prev[idUsuario]
+    }));
+  };
 
   const abrirModal = (usuario = null) => {
     if (usuario) {
@@ -220,6 +237,18 @@ const GestionUsuarios = () => {
             </button>
           </div>
 
+          {/* Buscador */}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por nombre de usuario..."
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent"
+            />
+          </div>
+
           {/* Barra decorativa */}
           <div className="w-24 h-1 bg-gradient-to-r from-[#1E3A8A] to-[#F59E0B] rounded-full"></div>
         </div>
@@ -249,13 +278,14 @@ const GestionUsuarios = () => {
                 <thead>
                   <tr className="bg-gradient-to-r from-[#1E3A8A] to-[#152a63] text-white">
                     <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-bold uppercase tracking-wider">Usuario</th>
+                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-bold uppercase tracking-wider">Contrasena</th>
                     <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-bold uppercase tracking-wider">Rol</th>
                     <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-bold uppercase tracking-wider">Estado</th>
                     <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs font-bold uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {usuarios.map((u, index) => (
+                  {usuariosFiltrados.map((u, index) => (
                     <tr 
                       key={u.id_usuario} 
                       className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-[#1E3A8A] hover:bg-opacity-5 transition-colors group`}
@@ -273,6 +303,30 @@ const GestionUsuarios = () => {
                             <p className="text-xs text-gray-400">ID: {u.id_usuario}</p>
                           </div>
                         </div>
+                      </td>
+
+                      {/* Contrasena */}
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 text-sm">
+                        {u.contrasena_visible ? (
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-gray-700">
+                              {mostrarContrasenas[u.id_usuario] ? u.contrasena_visible : '********'}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleMostrarContrasena(u.id_usuario);
+                              }}
+                              className="p-1 text-gray-400 hover:text-[#1E3A8A] transition"
+                              title={mostrarContrasenas[u.id_usuario] ? "Ocultar" : "Mostrar"}
+                            >
+                              {mostrarContrasenas[u.id_usuario] ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">No disponible</span>
+                        )}
                       </td>
 
                       {/* Rol */}
@@ -340,7 +394,7 @@ const GestionUsuarios = () => {
 
             {/* Vista móvil - Tarjetas */}
             <div className="sm:hidden divide-y divide-gray-100">
-              {usuarios.map((u) => (
+              {usuariosFiltrados.map((u) => (
                 <div key={u.id_usuario} className="p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -350,6 +404,19 @@ const GestionUsuarios = () => {
                       <div className="min-w-0">
                         <p className="font-bold text-gray-900 text-sm break-words">@{u.nombre_usuario}</p>
                         <p className="text-xs text-gray-500">ID: {u.id_usuario}</p>
+                        {u.contrasena_visible && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <span className="text-xs text-gray-600 font-mono">
+                              {mostrarContrasenas[u.id_usuario] ? u.contrasena_visible : '********'}
+                            </span>
+                            <button
+                              onClick={() => toggleMostrarContrasena(u.id_usuario)}
+                              className="p-0.5 text-gray-400"
+                            >
+                              {mostrarContrasenas[u.id_usuario] ? <EyeOff size={12} /> : <Eye size={12} />}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
@@ -391,7 +458,7 @@ const GestionUsuarios = () => {
             <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm">
                 <span className="text-gray-500">
-                  Mostrando <span className="font-bold text-[#1E3A8A]">{usuarios.length}</span> usuarios
+                  Mostrando <span className="font-bold text-[#1E3A8A]">{usuariosFiltrados.length}</span> de {usuarios.length} usuarios
                 </span>
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 bg-[#10B981] rounded-full animate-pulse"></span>
