@@ -264,6 +264,17 @@ const SeguimientoVotaciones = () => {
     const mesasFiltradas = mesas.filter(mesa => {
         const estado = (mesa.estado_mesa || '').toLowerCase().trim();
 
+        // Debug: log para ver qué está pasando
+        if (filtro === 'pendientes' && mesas.indexOf(mesa) === 0) {
+            console.log('🔍 DEBUG Filtro:', filtro);
+            console.log('🔍 Ejemplo mesa 1:', {
+                numero: mesa.numero_mesa,
+                estado_mesa: mesa.estado_mesa,
+                estado_lower: estado,
+                cantidad_actas: mesa.cantidad_actas
+            });
+        }
+
         // Aplicar filtro de estado primero
         if (filtro === 'con_acta') {
             if (mesa.cantidad_actas === 0) return false;
@@ -336,6 +347,9 @@ const SeguimientoVotaciones = () => {
 
         return true;
     });
+
+    // Debug: mostrar resultados del filtrado
+    console.log(`📊 Filtrado: ${mesas.length} mesas → ${mesasFiltradas.length} filtradas (filtro: ${filtro})`);
 
     if (loading) {
         return (
