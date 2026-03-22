@@ -92,8 +92,10 @@ const Transcripcion = () => {
   // Votos (GUARDAR COMO STRING MIENTRAS SE ESCRIBE)
   const [votosAlcalde, setVotosAlcalde] = useState([]);
   const [votosConcejal, setVotosConcejal] = useState([]);
-  const [votosNulos, setVotosNulos] = useState('');
-  const [votosBlancos, setVotosBlancos] = useState('');
+  const [votosNulosAlcalde, setVotosNulosAlcalde] = useState('');
+  const [votosBlancosAlcalde, setVotosBlancosAlcalde] = useState('');
+  const [votosNulosConcejal, setVotosNulosConcejal] = useState('');
+  const [votosBlancosConcejal, setVotosBlancosConcejal] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
   // Imagen del acta
@@ -369,7 +371,9 @@ const Transcripcion = () => {
     const hayVotosAlcalde = votosAlcalde.some((v) => toInt(v.cantidad) > 0);
     const hayVotosConcejal = votosConcejal.some((v) => toInt(v.cantidad) > 0);
 
-    if (!hayVotosAlcalde && !hayVotosConcejal && toInt(votosNulos) === 0 && toInt(votosBlancos) === 0) {
+    if (!hayVotosAlcalde && !hayVotosConcejal &&
+        toInt(votosNulosAlcalde) === 0 && toInt(votosBlancosAlcalde) === 0 &&
+        toInt(votosNulosConcejal) === 0 && toInt(votosBlancosConcejal) === 0) {
       mostrarNotificacion('error', 'Debe registrar al menos un voto');
       return;
     }
@@ -382,8 +386,8 @@ const Transcripcion = () => {
       const formData = new FormData();
       formData.append('id_mesa', selectedMesa.id_mesa);
       formData.append('id_tipo_eleccion', 1);
-      formData.append('votos_nulos', toInt(votosNulos));
-      formData.append('votos_blancos', toInt(votosBlancos));
+      formData.append('votos_nulos', toInt(votosNulosAlcalde) + toInt(votosNulosConcejal));
+      formData.append('votos_blancos', toInt(votosBlancosAlcalde) + toInt(votosBlancosConcejal));
       formData.append('observaciones', observaciones);
 
       const votosAlcaldeFiltrados = votosAlcalde
@@ -443,8 +447,10 @@ const Transcripcion = () => {
     setBuscarZona('');
     setBuscarRecinto('');
     setBuscarMesa('');
-    setVotosNulos('');
-    setVotosBlancos('');
+    setVotosNulosAlcalde('');
+    setVotosBlancosAlcalde('');
+    setVotosNulosConcejal('');
+    setVotosBlancosConcejal('');
     setObservaciones('');
     setImagenActa(null);
     setPreviewImagen(null);
@@ -464,7 +470,8 @@ const Transcripcion = () => {
 
   const totalVotosAlcalde = votosAlcalde.reduce((sum, v) => sum + toInt(v.cantidad), 0);
   const totalVotosConcejal = votosConcejal.reduce((sum, v) => sum + toInt(v.cantidad), 0);
-  const totalGeneral = totalVotosAlcalde + totalVotosConcejal + toInt(votosNulos) + toInt(votosBlancos);
+  const totalNulosBlancos = toInt(votosNulosAlcalde) + toInt(votosBlancosAlcalde) + toInt(votosNulosConcejal) + toInt(votosBlancosConcejal);
+  const totalGeneral = totalVotosAlcalde + totalVotosConcejal + totalNulosBlancos;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -939,42 +946,87 @@ const Transcripcion = () => {
                     </div>
                   </div>
 
-                  {/* Votos Nulos y Blancos */}
-                  <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
-                    <div className="bg-red-50 border border-red-200 rounded-lg sm:rounded-xl p-3 sm:p-4">
-                      <label className="block text-xs font-medium text-red-700 mb-2">Votos Nulos</label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        enterKeyHint="done"
-                        autoComplete="off"
-                        maxLength="3"
-                        value={String(votosNulos ?? '')}
-                        onChange={(e) => {
-                          const cleaned = e.target.value.replace(/[^0-9]/g, '');
-                          setVotosNulos(cleaned);
-                        }}
-                        className="w-full text-center text-lg sm:text-xl font-bold border border-red-200 rounded-lg py-2 sm:py-3 focus:border-red-600 focus:ring-1 focus:ring-red-600 focus:outline-none"
-                        placeholder="0"
-                      />
-                    </div>
+                  {/* Votos Nulos y Blancos - Alcalde */}
+                  <div className="mb-4 sm:mb-5">
+                    <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-2 sm:mb-3">Votos Nulos y Blancos - Alcalde</h3>
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                      <div className="bg-red-50 border border-red-200 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                        <label className="block text-xs font-medium text-red-700 mb-2">Votos Nulos</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          enterKeyHint="done"
+                          autoComplete="off"
+                          maxLength="3"
+                          value={String(votosNulosAlcalde ?? '')}
+                          onChange={(e) => {
+                            const cleaned = e.target.value.replace(/[^0-9]/g, '');
+                            setVotosNulosAlcalde(cleaned);
+                          }}
+                          className="w-full text-center text-lg sm:text-xl font-bold border border-red-200 rounded-lg py-2 sm:py-3 focus:border-red-600 focus:ring-1 focus:ring-red-600 focus:outline-none"
+                          placeholder="0"
+                        />
+                      </div>
 
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl p-3 sm:p-4">
-                      <label className="block text-xs font-medium text-gray-700 mb-2">Votos en Blanco</label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        enterKeyHint="done"
-                        autoComplete="off"
-                        maxLength="3"
-                        value={String(votosBlancos ?? '')}
-                        onChange={(e) => {
-                          const cleaned = e.target.value.replace(/[^0-9]/g, '');
-                          setVotosBlancos(cleaned);
-                        }}
-                        className="w-full text-center text-lg sm:text-xl font-bold border border-gray-200 rounded-lg py-2 sm:py-3 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:outline-none"
-                        placeholder="0"
-                      />
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                        <label className="block text-xs font-medium text-gray-700 mb-2">Votos en Blanco</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          enterKeyHint="done"
+                          autoComplete="off"
+                          maxLength="3"
+                          value={String(votosBlancosAlcalde ?? '')}
+                          onChange={(e) => {
+                            const cleaned = e.target.value.replace(/[^0-9]/g, '');
+                            setVotosBlancosAlcalde(cleaned);
+                          }}
+                          className="w-full text-center text-lg sm:text-xl font-bold border border-gray-200 rounded-lg py-2 sm:py-3 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:outline-none"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Votos Nulos y Blancos - Concejal */}
+                  <div className="mb-4 sm:mb-6">
+                    <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-2 sm:mb-3">Votos Nulos y Blancos - Concejal</h3>
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                      <div className="bg-red-50 border border-red-200 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                        <label className="block text-xs font-medium text-red-700 mb-2">Votos Nulos</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          enterKeyHint="done"
+                          autoComplete="off"
+                          maxLength="3"
+                          value={String(votosNulosConcejal ?? '')}
+                          onChange={(e) => {
+                            const cleaned = e.target.value.replace(/[^0-9]/g, '');
+                            setVotosNulosConcejal(cleaned);
+                          }}
+                          className="w-full text-center text-lg sm:text-xl font-bold border border-red-200 rounded-lg py-2 sm:py-3 focus:border-red-600 focus:ring-1 focus:ring-red-600 focus:outline-none"
+                          placeholder="0"
+                        />
+                      </div>
+
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                        <label className="block text-xs font-medium text-gray-700 mb-2">Votos en Blanco</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          enterKeyHint="done"
+                          autoComplete="off"
+                          maxLength="3"
+                          value={String(votosBlancosConcejal ?? '')}
+                          onChange={(e) => {
+                            const cleaned = e.target.value.replace(/[^0-9]/g, '');
+                            setVotosBlancosConcejal(cleaned);
+                          }}
+                          className="w-full text-center text-lg sm:text-xl font-bold border border-gray-200 rounded-lg py-2 sm:py-3 focus:border-gray-600 focus:ring-1 focus:ring-gray-600 focus:outline-none"
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
                   </div>
 
