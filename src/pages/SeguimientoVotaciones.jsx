@@ -239,15 +239,28 @@ const SeguimientoVotaciones = () => {
 
     // Funcion auxiliar para obtener el distrito de una mesa
     const getDistritoMesa = (mesa) => {
+        // Debug: ver estructura de datos
+        if (mesa.numero_mesa === 1) {
+            console.log('DEBUG Mesa 1:', {
+                distrito_nombre: mesa.distrito_nombre,
+                geografico_tipo: mesa.geografico_tipo,
+                geografico_padre: mesa.geografico_padre,
+                jerarquia_tipos: mesa.jerarquia_tipos,
+                jerarquia_nombres: mesa.jerarquia_nombres
+            });
+        }
+
         // Primero verificar si el backend ya extrajo el distrito
         if (mesa.distrito_nombre) return mesa.distrito_nombre;
 
-        // Buscar en jerarquia un elemento que empiece o contenga "distrito" (case insensitive)
-        if (mesa.jerarquia_nombres) {
-            const distritoEncontrado = mesa.jerarquia_nombres.find(j =>
-                j.toLowerCase().startsWith('distrito') || j.toLowerCase().includes('distrito ')
+        // Buscar en jerarquia_tipos para ubicar el distrito (más confiable)
+        if (mesa.jerarquia_tipos && mesa.jerarquia_nombres) {
+            const indexDistrito = mesa.jerarquia_tipos.findIndex(tipo =>
+                tipo && tipo.toLowerCase().includes('distrito')
             );
-            if (distritoEncontrado) return distritoEncontrado;
+            if (indexDistrito !== -1 && mesa.jerarquia_nombres[indexDistrito]) {
+                return mesa.jerarquia_nombres[indexDistrito];
+            }
         }
 
         // Si el geografico padre tiene tipo distrito, usar su nombre
@@ -255,25 +268,18 @@ const SeguimientoVotaciones = () => {
             return mesa.geografico_padre;
         }
 
-        // Si no se encontró distrito, buscar en jerarquia_tipos para ubicar el distrito
-        if (mesa.jerarquia_tipos && mesa.jerarquia_nombres) {
-            const indexDistrito = mesa.jerarquia_tipos.findIndex(tipo =>
-                tipo.toLowerCase().includes('distrito')
-            );
-            if (indexDistrito !== -1 && mesa.jerarquia_nombres[indexDistrito]) {
-                return mesa.jerarquia_nombres[indexDistrito];
-            }
-        }
-
-        // Como última opción, buscar en la jerarquia cualquier nombre con número que podría ser un distrito
+        // Buscar en jerarquia_nombres por texto que contenga "distrito"
         if (mesa.jerarquia_nombres) {
-            const posibleDistrito = mesa.jerarquia_nombres.find(j =>
-                /distrito\s+\d+/i.test(j) || /^d\d+$/i.test(j) || /^distrito$/i.test(j)
+            const distritoEncontrado = mesa.jerarquia_nombres.find(j =>
+                j && (j.toLowerCase().startsWith('distrito') || j.toLowerCase().includes('distrito '))
             );
-            if (posibleDistrito) return posibleDistrito;
+            if (distritoEncontrado) return distritoEncontrado;
         }
 
-        return 'Sin distrito';
+        // Como fallback, usar geografico_padre si existe
+        if (mesa.geografico_padre) return mesa.geografico_padre;
+
+        return null;
     };
 
     // Filtrar mesas
